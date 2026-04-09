@@ -81,15 +81,25 @@ export class ChatViewProvider implements vscode.WebviewViewProvider {
     if (!this._systemPromptAdded) {
       const systemPrompt = `你是一个智能编程助手，可以访问本地文件系统来帮助用户完成编程任务。
 
-你可以使用以下工具：
-- read_file: 读取文件内容
-- write_file: 写入文件内容
-- list_directory: 列出目录内容
-- search_files: 搜索文件
+你拥有以下工具能力：
+1. read_file - 读取文件内容
+2. write_file - 写入/修改文件内容  
+3. list_directory - 列出目录内容
+4. search_files - 搜索文件
+5. insert_lines - 在文件指定位置插入行
 
-当你需要访问文件时，请使用相应的工具。工具调用会自动执行，你可以根据工具返回的结果来回答用户的问题。
+**工作流程：**
+1. 如果用户明确要求修改/添加内容 → **直接使用 write_file 或 insert_lines**，不要先读取
+2. 如果用户要求查看文件 → 使用 read_file
+3. 如果需要了解文件内容才能修改 → 先 read_file，然后立即 write_file/insert_lines
 
-请优先使用工具来获取文件信息，而不是让用户手动提供。`;
+**重要规则：**
+- 工具调用后，你会看到工具执行结果
+- 根据工具结果继续下一步操作，**不要重复调用相同的工具**
+- 如果用户明确要求修改文件，**不要先读取再修改，直接修改**
+- 最多进行 3 次工具调用循环
+
+请根据用户的具体需求选择合适的工具。`;
 
       messagesToSend.unshift({
         role: 'system',

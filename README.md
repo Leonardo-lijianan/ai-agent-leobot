@@ -1,53 +1,64 @@
-# ai-agent-leobot README
+# AI Agent LeoBot
 
-This is the README for your extension "ai-agent-leobot". After writing up a brief description, we recommend including the following sections.
+本地 AI Agent 运行时，支持多模型编排和自定义 Skills
 
-## Features
+## 功能特性
 
-Describe specific features of your extension including screenshots of your extension in action. Image paths are relative to this README file.
+- 🤖 支持多个 AI 模型（OpenAI、硅基流动等）
+- 💬 智能聊天界面，支持流式输出
+- 🔧 MCP（Model Context Protocol）支持，让 AI 可以访问本地文件
+- 📁 文件读写、目录浏览、文件搜索
+- ✨ 代码解释和优化功能
+- 🎯 自定义 Skills 系统
 
-For example if there is an image subfolder under your extension project workspace:
+## 使用方法
 
-\!\[feature X\]\(images/feature-x.png\)
+1. 配置 API Key
+   - 点击侧边栏的 AI Agent LeoBot 图标
+   - 在设置中添加您的 API Key 和模型配置
 
-> Tip: Many popular extensions utilize animations. This is an excellent way to show off your extension! We recommend short, focused animations that are easy to follow.
+2. 开始聊天
+   - 在聊天框中输入问题
+   - 支持 Markdown 格式输出
 
-## Requirements
+3. 使用 MCP 工具
+   - AI 可以自动调用文件读写工具
+   - 支持相对路径（基于工作空间目录）
 
-If you have any requirements or dependencies, add a section describing those and how to install and configure them.
+4. 代码解释/优化
+   - 选中代码
+   - 右键 → AI Agent → 解释代码 / 优化代码
 
-## Extension Settings
+## 配置说明
 
-Include if your extension adds any VS Code settings through the `contributes.configuration` extension point.
+在设置中配置模型信息：
 
-For example:
+```json
+{
+  "aiAgentLeoBot.models": [
+    {
+      "name": "My Model",
+      "type": "openai",
+      "apiBase": "https://api.example.com",
+      "apiKey": "your-api-key",
+      "model": "gpt-4"
+    }
+  ]
+}
+```
 
-This extension contributes the following settings:
+## 已知问题
 
-* `myExtension.enable`: Enable/disable this extension.
-* `myExtension.thing`: Set to `blah` to do something.
+无
 
-## Known Issues
+## 更新日志
 
-Calling out known issues can help limit users opening duplicate issues against your extension.
+### 0.0.1
 
-## Release Notes
-
-Users appreciate release notes as you update your extension.
-
-### 1.0.0
-
-Initial release of ...
-
-### 1.0.1
-
-Fixed issue #.
-
-### 1.1.0
-
-Added features X, Y, and Z.
-
----
+- 初始版本
+- 支持 OpenAI 兼容模型
+- 实现 MCP 文件系统
+- 添加代码解释和优化功能
 
 ## Following extension guidelines
 

@@ -20,14 +20,6 @@
     "硅基流动",
     "OpenAI"
   ],
-  "activationEvents": [
-    "onView:ai-agent-leobot-chat",
-    "onCommand:ai-agent-leobot.chat",
-    "onCommand:ai-agent-leobot.configure",
-    "onCommand:ai-agent-leobot.explain",
-    "onCommand:ai-agent-leobot.optimize",
-    "onCommand:ai-agent-leobot.clearChat"
-  ],
   "main": "./out/extension.js",
   "contributes": {
     "viewsContainers": {
@@ -135,7 +127,7 @@
     "openai": "^4.28.0"
   },
   "devDependencies": {
-    "@types/vscode": "^1.115.0",
+    "@types/vscode": "^1.107.0",
     "@types/mocha": "^10.0.10",
     "@types/node": "22.x",
     "typescript-eslint": "^8.56.1",

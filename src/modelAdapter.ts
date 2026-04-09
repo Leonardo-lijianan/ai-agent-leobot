@@ -39,6 +39,8 @@ export class OpenAIAdapter implements ModelAdapter {
     const TOOL_CALL_TIMEOUT = 30000; // 30 秒超时
     const MAX_TOOL_CALLS = 10; // 最多 10 个工具调用
     const MAX_RETRIES = 2; // 最多重试 2 次
+    const MAX_ITERATIONS = 5; // 防止无限循环：最多 5 次工具调用循环
+    let iterationCount = 0; // 当前循环次数
 
     try {
       const formattedMessages = messages.map(msg => ({
@@ -46,41 +48,59 @@ export class OpenAIAdapter implements ModelAdapter {
         content: msg.content
       }));
 
-      const mcpTools = mcpServer.listTools();
-      console.log('🟢 [MCP] 可用的工具:', mcpTools.map(t => t.name).join(', '));
-      
-      const tools = enableTools ? mcpTools.map(tool => ({
-        type: 'function' as const,
-        function: {
-          name: tool.name,
-          description: tool.description,
-          parameters: tool.inputSchema
+      while (iterationCount < MAX_ITERATIONS) {
+        iterationCount++;
+        console.log(`🔵 [MCP] 第 ${iterationCount} 次迭代`);
+
+        const mcpTools = mcpServer.listTools();
+        console.log('🟢 [MCP] 可用的工具:', mcpTools.map(t => t.name).join(', '));
+        
+        const tools = enableTools ? mcpTools.map(tool => ({
+          type: 'function' as const,
+          function: {
+            name: tool.name,
+            description: tool.description,
+            parameters: tool.inputSchema
+          }
+        })) : undefined;
+
+        console.log('🟢 [MCP] 启用工具:', enableTools);
+        if (tools) {
+          console.log('🟢 [MCP] 工具列表:', tools.map(t => t.function.name).join(', '));
         }
-      })) : undefined;
 
-      console.log('🟢 [MCP] 启用工具:', enableTools);
-      if (tools) {
-        console.log('🟢 [MCP] 工具列表:', tools.map(t => t.function.name).join(', '));
-      }
+        const response = await this.client.chat.completions.create({
+          model: model || this.defaultModel,
+          messages: formattedMessages,
+          temperature: 0.7,
+          max_tokens: 2048,
+          tools: tools
+        });
 
-      const response = await this.client.chat.completions.create({
-        model: model || this.defaultModel,
-        messages: formattedMessages,
-        temperature: 0.7,
-        max_tokens: 2048,
-        tools: tools
-      });
+        console.log('🟢 [MCP] API 请求参数:', {
+          model: model || this.defaultModel,
+          hasTools: !!tools,
+          toolsCount: tools?.length || 0,
+          messagesCount: formattedMessages.length
+        });
 
-      console.log('🟢 [MCP] API 响应:', {
-        hasToolCalls: !!response.choices[0]?.message?.tool_calls,
-        toolCallsCount: response.choices[0]?.message?.tool_calls?.length || 0,
-        content: response.choices[0]?.message?.content?.substring(0, 100) + '...'
-      });
+        console.log('🟢 [MCP] API 响应:', {
+          hasToolCalls: !!response.choices[0]?.message?.tool_calls,
+          toolCallsCount: response.choices[0]?.message?.tool_calls?.length || 0,
+          content: response.choices[0]?.message?.content?.substring(0, 100) + '...'
+        });
 
-      const choice = response.choices[0];
-      
-      if (choice?.message?.tool_calls && choice.message.tool_calls.length > 0) {
+        const choice = response.choices[0];
+        
+        // 如果没有工具调用，直接返回
+        if (!choice?.message?.tool_calls || choice.message.tool_calls.length === 0) {
+          console.log('🟢 [MCP] 没有工具调用，返回最终结果');
+          return choice?.message?.content || '没有响应内容';
+        }
+
+        // 有工具调用，执行工具
         const toolCalls = choice.message.tool_calls;
+        console.log(`🟢 [MCP] 需要执行 ${toolCalls.length} 个工具调用`);
 
         // 限制工具调用总数
         if (toolCalls.length > MAX_TOOL_CALLS) {
@@ -151,21 +171,20 @@ export class OpenAIAdapter implements ModelAdapter {
           }
         }
 
-        const finalResponse = await this.client.chat.completions.create({
-          model: model || this.defaultModel,
-          messages: [
-            ...formattedMessages,
-            choice.message,
-            ...toolResults
-          ],
-          temperature: 0.7,
-          max_tokens: 2048
-        });
+        // 将工具结果添加到消息历史中
+        if (choice.message.content) {
+          formattedMessages.push({
+            role: choice.message.role,
+            content: choice.message.content
+          });
+        }
+        formattedMessages.push(...toolResults);
 
-        return finalResponse.choices[0]?.message?.content || '工具调用完成，但没有返回内容';
+        console.log(`🟢 [MCP] 工具执行完成，准备进行下一次迭代`);
       }
 
-      return choice?.message?.content || '没有响应内容';
+      console.warn('⚠️ [MCP] 达到最大迭代次数，返回当前结果');
+      return '已达到最大工具调用次数限制，请继续提问或重新描述需求';
     } catch (error: any) {
       throw new Error(`模型调用失败：${error.message}`);
     }
