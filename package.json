@@ -1,0 +1,147 @@
+{
+  "name": "ai-agent-leobot",
+  "displayName": "AI Agent LeoBot",
+  "description": "本地 AI Agent 运行时，支持多模型编排和自定义 Skills",
+  "version": "0.0.1",
+  "publisher": "leo",
+  "engines": {
+    "vscode": "^1.107.0"
+  },
+  "categories": [
+    "Other",
+    "Machine Learning",
+    "Programming Languages"
+  ],
+  "keywords": [
+    "AI",
+    "Agent",
+    "LLM",
+    "Chat",
+    "硅基流动",
+    "OpenAI"
+  ],
+  "activationEvents": [
+    "onView:ai-agent-leobot-chat",
+    "onCommand:ai-agent-leobot.chat",
+    "onCommand:ai-agent-leobot.configure",
+    "onCommand:ai-agent-leobot.explain",
+    "onCommand:ai-agent-leobot.optimize",
+    "onCommand:ai-agent-leobot.clearChat"
+  ],
+  "main": "./out/extension.js",
+  "contributes": {
+    "viewsContainers": {
+      "activitybar": [
+        {
+          "id": "ai-agent-leobot",
+          "title": "AI Agent LeoBot",
+          "icon": "$(robot)"
+        }
+      ]
+    },
+    "views": {
+      "ai-agent-leobot": [
+        {
+          "type": "webview",
+          "id": "ai-agent-leobot-chat",
+          "name": "AI Chat",
+          "icon": "$(comment-discussion)",
+          "contextualTitle": "AI Agent Chat"
+        }
+      ]
+    },
+    "commands": [
+      {
+        "command": "ai-agent-leobot.chat",
+        "title": "打开 AI 聊天",
+        "icon": "$(comment-discussion)",
+        "category": "AI Agent"
+      },
+      {
+        "command": "ai-agent-leobot.configure",
+        "title": "配置模型和 API",
+        "icon": "$(gear)",
+        "category": "AI Agent"
+      },
+      {
+        "command": "ai-agent-leobot.explain",
+        "title": "解释选中的代码",
+        "icon": "$(lightbulb)",
+        "category": "AI Agent"
+      },
+      {
+        "command": "ai-agent-leobot.optimize",
+        "title": "优化选中的代码",
+        "icon": "$(zap)",
+        "category": "AI Agent"
+      }
+    ],
+    "menus": {
+      "editor/context": [
+        {
+          "submenu": "ai-agent-leobot-context",
+          "group": "ai-agent"
+        }
+      ],
+      "ai-agent-leobot-context": [
+        {
+          "command": "ai-agent-leobot.explain",
+          "group": "ai"
+        },
+        {
+          "command": "ai-agent-leobot.optimize",
+          "group": "ai"
+        }
+      ]
+    },
+    "submenus": [
+      {
+        "id": "ai-agent-leobot-context",
+        "label": "AI Agent"
+      }
+    ],
+    "configuration": {
+      "title": "AI Agent LeoBot",
+      "properties": {
+        "aiAgentLeoBot.models": {
+          "type": "array",
+          "default": [
+            {
+              "name": "硅基流动",
+              "type": "openai",
+              "endpoint": "https://api.siliconflow.cn/v1",
+              "apiKey": ""
+            }
+          ],
+          "description": "配置的 AI 模型列表"
+        },
+        "aiAgentLeoBot.defaultModel": {
+          "type": "string",
+          "default": "硅基流动",
+          "description": "默认使用的模型名称"
+        }
+      }
+    }
+  },
+  "scripts": {
+    "vscode:prepublish": "npm run compile",
+    "compile": "tsc -p ./",
+    "watch": "tsc -watch -p ./",
+    "pretest": "npm run compile && npm run lint",
+    "lint": "eslint src",
+    "test": "vscode-test"
+  },
+  "dependencies": {
+    "openai": "^4.28.0"
+  },
+  "devDependencies": {
+    "@types/vscode": "^1.115.0",
+    "@types/mocha": "^10.0.10",
+    "@types/node": "22.x",
+    "typescript-eslint": "^8.56.1",
+    "eslint": "^9.39.3",
+    "typescript": "^5.9.3",
+    "@vscode/test-cli": "^0.0.12",
+    "@vscode/test-electron": "^2.5.2"
+  }
+}
