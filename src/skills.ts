@@ -1,26 +1,39 @@
 import * as vscode from 'vscode';
 import * as fs from 'fs';
 import * as path from 'path';
+import { Logger } from './logger.js';
 
 export interface Skill {
   name: string;
   description: string;
+  inputSchema: {
+    type: 'object';
+    properties: Record<string, any>;
+    required?: string[];
+  };
   execute(input: any): Promise<any>;
 }
 
 export class FileReadSkill implements Skill {
   name = 'file-read';
   description = '读取文件内容';
+  inputSchema = {
+    type: 'object' as const,
+    properties: {
+      filePath: { type: 'string', description: '要读取的文件路径' }
+    },
+    required: ['filePath'] as string[]
+  };
 
   async execute(input: { filePath: string }): Promise<string> {
     const filePath = input.filePath;
     
     if (!filePath) {
-      throw new Error('未提供文件路径');
+      Logger.errorAndThrow('未提供文件路径');
     }
 
     if (!fs.existsSync(filePath)) {
-      throw new Error(`文件不存在：${filePath}`);
+      Logger.errorAndThrow(`文件不存在：${filePath}`);
     }
 
     const content = fs.readFileSync(filePath, 'utf-8');
@@ -31,12 +44,20 @@ export class FileReadSkill implements Skill {
 export class FileWriteSkill implements Skill {
   name = 'file-write';
   description = '写入文件内容';
+  inputSchema = {
+    type: 'object' as const,
+    properties: {
+      filePath: { type: 'string', description: '要写入的文件路径' },
+      content: { type: 'string', description: '要写入的内容' }
+    },
+    required: ['filePath', 'content'] as string[]
+  };
 
   async execute(input: { filePath: string; content: string }): Promise<void> {
     const { filePath, content } = input;
     
     if (!filePath) {
-      throw new Error('未提供文件路径');
+      Logger.errorAndThrow('未提供文件路径');
     }
 
     const dir = path.dirname(filePath);
@@ -51,6 +72,11 @@ export class FileWriteSkill implements Skill {
 export class GetActiveFileSkill implements Skill {
   name = 'get-active-file';
   description = '获取当前活动编辑器的文件信息';
+  inputSchema = {
+    type: 'object' as const,
+    properties: {},
+    required: [] as string[]
+  };
 
   async execute(): Promise<{ filePath: string; content: string; language: string; selectedText: string } | null> {
     const editor = vscode.window.activeTextEditor;
@@ -102,6 +128,13 @@ export class SkillManager {
     return this.skills.get(name);
   }
 
+  /**
+   * 获取所有 Skill（供 ToolRegistry 使用）
+   */
+  getSkills(): Skill[] {
+    return Array.from(this.skills.values());
+  }
+
   getAll(): Skill[] {
     return Array.from(this.skills.values());
   }
@@ -110,7 +143,7 @@ export class SkillManager {
     const skill = this.get(name);
     
     if (!skill) {
-      throw new Error(`Skill 不存在：${name}`);
+      Logger.errorAndThrow(`Skill 不存在：${name}`);
     }
 
     return await skill.execute(input);

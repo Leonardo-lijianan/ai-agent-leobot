@@ -1,0 +1,590 @@
+<!DOCTYPE html>
+<html lang="zh-CN">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <meta http-equiv="Content-Security-Policy" content="default-src 'none'; style-src 'unsafe-inline'; script-src 'unsafe-inline';">
+  <title>AI Agent LeoBot 配置</title>
+  <style>
+    * {
+      margin: 0;
+      padding: 0;
+      box-sizing: border-box;
+    }
+    
+    body {
+      font-family: var(--vscode-font-family);
+      font-size: var(--vscode-font-size);
+      color: var(--vscode-foreground);
+      background-color: var(--vscode-sideBar-background);
+      padding: 20px;
+    }
+    
+    h2 {
+      margin-bottom: 20px;
+      font-weight: 600;
+    }
+    
+    .form-group {
+      margin-bottom: 20px;
+    }
+    
+    label {
+      display: block;
+      margin-bottom: 8px;
+      font-weight: 500;
+    }
+    
+    input[type="text"],
+    input[type="password"],
+    select,
+    textarea {
+      width: 100%;
+      padding: 8px 12px;
+      border: 1px solid var(--vscode-input-border);
+      border-radius: 4px;
+      background-color: var(--vscode-input-background);
+      color: var(--vscode-input-foreground);
+      font-family: var(--vscode-font-family);
+      font-size: var(--vscode-font-size);
+    }
+    
+    input:focus,
+    select:focus,
+    textarea:focus {
+      outline: 1px solid var(--vscode-focusBorder);
+    }
+    
+    /* 修复下拉菜单选项的主题适配 */
+    select option {
+      background-color: var(--vscode-dropdown-background);
+      color: var(--vscode-dropdown-foreground);
+    }
+    
+    .button-group {
+      display: flex;
+      gap: 10px;
+      margin-top: 30px;
+    }
+    
+    button {
+      padding: 10px 20px;
+      border: none;
+      border-radius: 4px;
+      cursor: pointer;
+      font-size: var(--vscode-font-size);
+      font-family: var(--vscode-font-family);
+    }
+    
+    button.primary {
+      background-color: var(--vscode-button-background);
+      color: var(--vscode-button-foreground);
+    }
+    
+    button.secondary {
+      background-color: var(--vscode-button-secondaryBackground);
+      color: var(--vscode-button-secondaryForeground);
+    }
+    
+    button:hover {
+      opacity: 0.9;
+    }
+    
+    button:disabled {
+      opacity: 0.5;
+      cursor: not-allowed;
+    }
+    
+    .status {
+      margin-top: 15px;
+      padding: 10px;
+      border-radius: 4px;
+      display: none;
+    }
+    
+    .status.success {
+      background-color: rgba(0, 255, 0, 0.1);
+      border: 1px solid var(--vscode-testing-iconPassed);
+      color: var(--vscode-testing-iconPassed);
+    }
+    
+    .status.error {
+      background-color: rgba(255, 0, 0, 0.1);
+      border: 1px solid var(--vscode-errorForeground);
+      color: var(--vscode-errorForeground);
+    }
+    
+    .hint {
+      font-size: 0.9em;
+      color: var(--vscode-descriptionForeground);
+      margin-top: 4px;
+    }
+    
+    input:disabled {
+      opacity: 0.6;
+      cursor: not-allowed;
+      background-color: var(--vscode-input-background);
+    }
+    
+    .info-badge {
+      display: inline-block;
+      background-color: var(--vscode-badge-background);
+      color: var(--vscode-badge-foreground);
+      padding: 2px 8px;
+      border-radius: 12px;
+      font-size: 0.85em;
+      margin-left: 8px;
+    }
+  </style>
+</head>
+<body>
+  <h2 id="configTitle">⚙️ AI Agent LeoBot 配置</h2>
+  
+  <div class="form-group">
+    <label for="agent">当前 Agent</label>
+    <select id="agent">
+      <option value="default">通用助手</option>
+    </select>
+    <div class="hint">选择要使用的 AI Agent 角色</div>
+  </div>
+  
+  <div class="button-group">
+    <button id="editModelBtn" class="primary">✏️ 编辑模型配置</button>
+    <button id="addAgentBtn" class="secondary">➕ 新增 Agent</button>
+  </div>
+  
+  <div id="status" class="status"></div>
+  
+  <!-- 编辑模型配置模态框 -->
+  <div id="editModelModal" style="display: none; position: fixed; top: 0; left: 0; width: 100%; height: 100%; background: rgba(0,0,0,0.5); z-index: 1000;">
+    <div style="position: absolute; top: 50%; left: 50%; transform: translate(-50%, -50%); background: var(--vscode-sideBar-background); padding: 20px; border-radius: 8px; width: 600px; max-height: 80vh; overflow-y: auto;">
+      <h3 style="margin-bottom: 20px;">✏️ 编辑模型配置</h3>
+      
+      <div class="form-group">
+        <label for="editProvider">模型提供商</label>
+        <select id="editProvider">
+          <option value="siliconflow">硅基流动</option>
+          <option value="openai">OpenAI</option>
+          <option value="gemini">Google Gemini</option>
+          <option value="custom">自定义</option>
+        </select>
+      </div>
+      
+      <div class="form-group">
+        <label for="editConfigName">配置名称</label>
+        <input type="text" id="editConfigName" placeholder="例如：硅基-Qwen3.5" />
+        <div class="hint">给这个配置起个友好的名称</div>
+      </div>
+      
+      <div class="form-group">
+        <label for="editEndpoint">
+          API 端点
+          <span id="editEndpointBadge" class="info-badge" style="display: none;">自动配置</span>
+        </label>
+        <input type="text" id="editEndpoint" placeholder="https://api.siliconflow.cn/v1" />
+        <div class="hint" id="editEndpointHint">模型提供商的 API 地址</div>
+      </div>
+      
+      <div class="form-group">
+        <label for="editApiKey">API Key</label>
+        <input type="password" id="editApiKey" placeholder="sk-..." />
+        <div class="hint">API Key 将被安全存储</div>
+      </div>
+      
+      <div class="form-group">
+        <label for="editModelName">模型 ID</label>
+        <input type="text" id="editModelName" placeholder="Qwen/Qwen3.5-122B-A10B" />
+        <div class="hint">模型提供商的具体模型标识</div>
+      </div>
+      
+      <div class="button-group" style="margin-top: 20px;">
+        <button id="testEditModelBtn" class="secondary">🔍 测试连接</button>
+        <button id="saveEditModelBtn" class="primary">💾 保存配置</button>
+        <button id="listEditModelsBtn" class="secondary">📋 查看可用模型</button>
+        <button id="closeEditModelBtn" class="secondary" style="margin-left: auto;">✖️ 关闭</button>
+      </div>
+      
+      <div id="editStatus" class="status" style="margin-top: 15px;"></div>
+    </div>
+  </div>
+  
+  <!-- 新增 Agent 模态框 -->
+  <div id="addAgentModal" style="display: none; position: fixed; top: 0; left: 0; width: 100%; height: 100%; background: rgba(0,0,0,0.5); z-index: 1000;">
+    <div style="position: absolute; top: 50%; left: 50%; transform: translate(-50%, -50%); background: var(--vscode-sideBar-background); padding: 20px; border-radius: 8px; width: 600px; max-height: 80vh; overflow-y: auto;">
+      <h3 style="margin-bottom: 20px;">➕ 新增 Agent</h3>
+      
+      <div class="form-group">
+        <label for="newAgentId">Agent ID</label>
+        <input type="text" id="newAgentId" placeholder="例如：code-reviewer" />
+        <div class="hint">唯一标识符，只能包含字母、数字和连字符</div>
+      </div>
+      
+      <div class="form-group">
+        <label for="newAgentName">Agent 名称</label>
+        <input type="text" id="newAgentName" placeholder="例如：代码审查员" />
+        <div class="hint">显示名称</div>
+      </div>
+      
+      <div class="form-group">
+        <label for="newAgentDesc">描述</label>
+        <input type="text" id="newAgentDesc" placeholder="例如：专注于代码审查和优化" />
+        <div class="hint">简要描述 Agent 的用途</div>
+      </div>
+      
+      <div class="form-group">
+        <label for="newAgentPrompt">系统提示词</label>
+        <textarea id="newAgentPrompt" rows="8" placeholder="你是一位专业的代码审查员..."></textarea>
+        <div class="hint">定义 Agent 的角色和行为</div>
+      </div>
+      
+      <div class="form-group">
+        <label>可用工具</label>
+        <div style="display: grid; grid-template-columns: repeat(2, 1fr); gap: 8px;">
+          <label style="font-weight: normal;"><input type="checkbox" class="agent-tool" value="read_file" checked /> 读取文件</label>
+          <label style="font-weight: normal;"><input type="checkbox" class="agent-tool" value="write_file" checked /> 写入文件</label>
+          <label style="font-weight: normal;"><input type="checkbox" class="agent-tool" value="list_directory" checked /> 列出目录</label>
+          <label style="font-weight: normal;"><input type="checkbox" class="agent-tool" value="search_files" checked /> 搜索文件</label>
+          <label style="font-weight: normal;"><input type="checkbox" class="agent-tool" value="insert_lines" checked /> 插入行</label>
+        </div>
+        <div class="hint">选择此 Agent 可以使用的工具</div>
+      </div>
+      
+      <div class="button-group" style="margin-top: 20px;">
+        <button id="confirmAddAgent" class="primary">确定</button>
+        <button id="cancelAddAgent" class="secondary">取消</button>
+      </div>
+      
+      <div id="addAgentStatus" class="status" style="margin-top: 15px;"></div>
+    </div>
+  </div>
+  
+  <script>
+    const vscode = acquireVsCodeApi();
+    
+    // 主界面元素
+    const agentSelect = document.getElementById('agent');
+    const editModelBtn = document.getElementById('editModelBtn');
+    const addAgentBtn = document.getElementById('addAgentBtn');
+    const statusDiv = document.getElementById('status');
+    const configTitle = document.getElementById('configTitle');
+    
+    // 编辑模型模态框元素
+    const editModelModal = document.getElementById('editModelModal');
+    const editStatus = document.getElementById('editStatus');
+    const editProvider = document.getElementById('editProvider');
+    const editEndpoint = document.getElementById('editEndpoint');
+    const editEndpointBadge = document.getElementById('editEndpointBadge');
+    const editEndpointHint = document.getElementById('editEndpointHint');
+    const editConfigName = document.getElementById('editConfigName');
+    const editApiKey = document.getElementById('editApiKey');
+    const editModelName = document.getElementById('editModelName');
+    const testEditModelBtn = document.getElementById('testEditModelBtn');
+    const saveEditModelBtn = document.getElementById('saveEditModelBtn');
+    const listEditModelsBtn = document.getElementById('listEditModelsBtn');
+    const closeEditModelBtn = document.getElementById('closeEditModelBtn');
+    
+    // 新增 Agent 模态框元素
+    const addAgentModal = document.getElementById('addAgentModal');
+    const addAgentStatus = document.getElementById('addAgentStatus');
+    const confirmAddAgent = document.getElementById('confirmAddAgent');
+    const cancelAddAgent = document.getElementById('cancelAddAgent');
+    
+    const presets = {
+      siliconflow: {
+        endpoint: 'https://api.siliconflow.cn/v1',
+        modelName: 'deepseek-ai/DeepSeek-V3'
+      },
+      openai: {
+        endpoint: 'https://api.openai.com/v1',
+        modelName: 'gpt-4o'
+      },
+      gemini: {
+        endpoint: 'https://generativelanguage.googleapis.com/v1beta',
+        modelName: 'gemini-1.5-pro'
+      },
+      custom: {
+        endpoint: '',
+        modelName: ''
+      }
+    };
+    
+    const providerNames = {
+      siliconflow: '硅基流动',
+      openai: 'OpenAI',
+      gemini: 'Google Gemini',
+      custom: '自定义'
+    };
+    
+    // 更新 endpoint 字段状态
+    function updateEndpointField(provider) {
+      if (provider === 'gemini') {
+        editEndpoint.disabled = true;
+        editEndpoint.value = 'https://generativelanguage.googleapis.com/v1beta';
+        editEndpointBadge.style.display = 'inline-block';
+        editEndpointHint.textContent = '✨ Google Gemini 自动配置，无需修改';
+      } else {
+        editEndpoint.disabled = false;
+        editEndpointBadge.style.display = 'none';
+        editEndpointHint.textContent = '模型提供商的 API 地址';
+      }
+    }
+    
+    // 打开编辑模型模态框
+    editModelBtn.addEventListener('click', () => {
+      console.log('[ConfigPanel] 点击编辑模型配置按钮');
+      editModelModal.style.display = 'block';
+    });
+    
+    // 关闭编辑模型模态框
+    closeEditModelBtn.addEventListener('click', () => {
+      editModelModal.style.display = 'none';
+    });
+    
+    // 显示模态框状态
+    function showEditStatus(message, type) {
+      editStatus.textContent = message;
+      editStatus.className = 'status ' + type;
+      editStatus.style.display = 'block';
+      
+      setTimeout(() => {
+        editStatus.style.display = 'none';
+      }, 5000);
+    }
+    
+    // 显示新增 Agent 模态框状态
+    function showAddAgentStatus(message, type) {
+      addAgentStatus.textContent = message;
+      addAgentStatus.className = 'status ' + type;
+      addAgentStatus.style.display = 'block';
+      
+      setTimeout(() => {
+        addAgentStatus.style.display = 'none';
+      }, 5000);
+    }
+    
+    // 测试连接
+    testEditModelBtn.addEventListener('click', () => {
+      const config = {
+        provider: editProvider.value,
+        endpoint: editEndpoint.value.trim(),
+        apiKey: editApiKey.value.trim(),
+        modelName: editModelName.value.trim()
+      };
+      
+      if (!config.apiKey) {
+        showEditStatus('请输入 API Key', 'error');
+        return;
+      }
+      
+      testEditModelBtn.disabled = true;
+      testEditModelBtn.textContent = '测试中...';
+      
+      vscode.postMessage({ type: 'test', ...config });
+    });
+    
+    // 保存配置
+    saveEditModelBtn.addEventListener('click', () => {
+      const config = {
+        configName: editConfigName.value.trim(), // 配置名称
+        provider: editProvider.value,
+        endpoint: editEndpoint.value.trim(),
+        apiKey: editApiKey.value.trim(),
+        modelName: editModelName.value.trim() // 模型 ID
+      };
+      
+      if (!config.configName) {
+        showEditStatus('请输入配置名称', 'error');
+        return;
+      }
+      
+      if (!config.apiKey) {
+        showEditStatus('请输入 API Key', 'error');
+        return;
+      }
+      
+      if (!config.endpoint) {
+        showEditStatus('请输入 API 端点', 'error');
+        return;
+      }
+      
+      vscode.postMessage({ type: 'saveModelConfig', ...config });
+    });
+    
+    // 查看可用模型
+    listEditModelsBtn.addEventListener('click', () => {
+      const config = {
+        provider: editProvider.value,
+        providerType: editProvider.value === 'gemini' ? 'gemini' : 'openai',
+        endpoint: editEndpoint.value.trim(),
+        apiKey: editApiKey.value.trim(),
+        modelName: editModelName.value.trim()
+      };
+      
+      if (!config.apiKey) {
+        showEditStatus('请输入 API Key', 'error');
+        return;
+      }
+      
+      listEditModelsBtn.disabled = true;
+      listEditModelsBtn.textContent = '加载中...';
+      
+      vscode.postMessage({ type: 'listModels', ...config });
+    });
+    
+    // 新增 Agent 按钮
+    addAgentBtn.addEventListener('click', () => {
+      addAgentModal.style.display = 'block';
+    });
+    
+    // 取消新增 Agent
+    cancelAddAgent.addEventListener('click', () => {
+      addAgentModal.style.display = 'none';
+    });
+    
+    // 确认新增 Agent
+    confirmAddAgent.addEventListener('click', () => {
+      const agentId = document.getElementById('newAgentId').value.trim();
+      const agentName = document.getElementById('newAgentName').value.trim();
+      const agentDesc = document.getElementById('newAgentDesc').value.trim();
+      const agentPrompt = document.getElementById('newAgentPrompt').value.trim();
+      
+      const selectedTools = Array.from(document.querySelectorAll('.agent-tool:checked')).map(cb => cb.value);
+      
+      if (!agentId || !agentName || !agentPrompt) {
+        showAddAgentStatus('请填写必填项', 'error');
+        return;
+      }
+      
+      if (!/^[a-zA-Z0-9-]+$/.test(agentId)) {
+        showAddAgentStatus('Agent ID 只能包含字母、数字和连字符', 'error');
+        return;
+      }
+      
+      vscode.postMessage({
+        type: 'addAgent',
+        agent: {
+          id: agentId,
+          name: agentName,
+          description: agentDesc,
+          systemPrompt: agentPrompt,
+          tools: selectedTools
+        }
+      });
+    });
+    
+    // 提供商切换
+    editProvider.addEventListener('change', (e) => {
+      const provider = e.target.value;
+      const preset = presets[provider];
+      editEndpoint.value = preset.endpoint;
+      editModelName.value = preset.modelName;
+      
+      updateEndpointField(provider);
+    });
+    
+    // 统一消息监听处理
+    window.addEventListener('message', (event) => {
+      const message = event.data;
+      
+      console.log('[ConfigPanel] 收到消息:', message.type);
+      
+      // 加载配置时填充编辑模态框的值
+      if (message.type === 'loadConfig') {
+        console.log('[ConfigPanel] 加载配置，填充表单数据');
+        if (message.config) {
+          editConfigName.value = message.config.configName || message.config.modelName || '';
+          editProvider.value = message.config.provider || 'siliconflow';
+          editEndpoint.value = message.config.endpoint || '';
+          editApiKey.value = message.config.apiKey || '';
+          editModelName.value = message.config.modelName || '';
+          agentSelect.value = message.config.agent || 'default';
+          
+          // 更新 endpoint 字段状态
+          updateEndpointField(editProvider.value);
+        }
+      }
+      
+      if (message.type === 'testResult') {
+        testEditModelBtn.disabled = false;
+        testEditModelBtn.textContent = '🔍 测试连接';
+        
+        if (message.success) {
+          showStatus('✅ 连接测试成功！', 'success');
+        } else {
+          showStatus('❌ 连接失败：' + message.error, 'error');
+        }
+      }
+      
+      if (message.type === 'listModelsResult') {
+        listEditModelsBtn.disabled = false;
+        listEditModelsBtn.textContent = '📋 查看可用模型';
+        
+        if (message.success) {
+          showStatus('✅ 可用模型：\n' + message.models, 'success');
+        } else {
+          showStatus('❌ ' + message.error, 'error');
+        }
+      }
+      
+      if (message.type === 'saveResult') {
+        if (message.success) {
+          showStatus('✅ 配置已保存！', 'success');
+        } else {
+          showStatus('❌ 保存失败：' + message.error, 'error');
+        }
+      }
+      
+      if (message.type === 'saveResult') {
+        if (message.success) {
+          showEditStatus('✅ 配置已保存！', 'success');
+          editModelModal.style.display = 'none';
+          
+          // 更新标题
+          configTitle.textContent = '⚙️ 配置 ' + providerNames[message.config.provider];
+        } else {
+          showEditStatus('❌ 保存失败：' + message.error, 'error');
+        }
+      }
+      
+      if (message.type === 'addAgentResult') {
+        if (message.success) {
+          showStatus('✅ Agent 已添加：' + message.agentName, 'success');
+          addAgentModal.style.display = 'none';
+          
+          // 清空表单
+          document.getElementById('newAgentId').value = '';
+          document.getElementById('newAgentName').value = '';
+          document.getElementById('newAgentDesc').value = '';
+          document.getElementById('newAgentPrompt').value = '';
+          document.querySelectorAll('.agent-tool').forEach(cb => cb.checked = false);
+        } else {
+          showStatus('❌ 添加失败：' + message.error, 'error');
+        }
+      }
+      
+      if (message.type === 'agentList') {
+        if (message.agents && message.agents.length > 0) {
+          agentSelect.innerHTML = '';
+          message.agents.forEach(agent => {
+            const option = document.createElement('option');
+            option.value = agent.id;
+            option.textContent = agent.name;
+            agentSelect.appendChild(option);
+          });
+        }
+      }
+    });
+    
+    function showStatus(message, type) {
+      statusDiv.textContent = message;
+      statusDiv.className = 'status ' + type;
+      statusDiv.style.whiteSpace = 'pre-wrap'; // 保留换行符
+      statusDiv.style.display = 'block';
+      
+      setTimeout(() => {
+        statusDiv.style.display = 'none';
+      }, 5000);
+    }
+  </script>
+</body>
+</html>

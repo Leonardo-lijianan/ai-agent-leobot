@@ -8,10 +8,18 @@ document.addEventListener('DOMContentLoaded', () => {
   const sendButton = document.getElementById('sendButton');
   const currentModelEl = document.getElementById('currentModel');
   const testMarkdownBtn = document.getElementById('testMarkdownBtn');
+  
+  // 新增：控制栏元素
+  const modeSelect = document.getElementById('modeSelect');
+  const agentSelect = document.getElementById('agentSelect');
+  const modelSelect = document.getElementById('modelSelect');
+  const agentSelectorGroup = document.getElementById('agentSelectorGroup');
+  const configBtn = document.getElementById('configBtn');
 
   console.log('🔵 按钮元素:', testMarkdownBtn);
 
   let isLoading = false;
+  let currentAgentMode = true; // 默认 Agent 模式启用
 
   // 引入 markdown-it 和 DOMPurify (通过 CDN)
   const markdownItScript = document.createElement('script');
@@ -68,11 +76,21 @@ document.addEventListener('DOMContentLoaded', () => {
       existingWelcome.remove();
     }
 
+    // 创建外层包装器
+    const wrapperDiv = document.createElement('div');
+    wrapperDiv.className = 'message-wrapper ' + message.role;
+    
+    // 创建消息气泡
     const messageDiv = document.createElement('div');
     messageDiv.className = 'message ' + message.role;
     
     const roleText = message.role === 'user' ? '👤 你' : 
                      message.role === 'assistant' ? '🤖 AI' : '⚠️ 错误';
+    
+    // 创建角色标签
+    const roleDiv = document.createElement('div');
+    roleDiv.className = 'message-role';
+    roleDiv.textContent = roleText;
     
     // 用户消息直接显示，AI 消息渲染 Markdown
     let contentHtml;
@@ -90,12 +108,13 @@ document.addEventListener('DOMContentLoaded', () => {
       }
     }
     
-    messageDiv.innerHTML = `
-      <div class="message-role">${roleText}</div>
-      <div class="message-content">${contentHtml}</div>
-    `;
+    messageDiv.innerHTML = `<div class="message-content">${contentHtml}</div>`;
     
-    chatContainer.appendChild(messageDiv);
+    // 添加元素到包装器（先标签，后对话框）
+    wrapperDiv.appendChild(roleDiv);
+    wrapperDiv.appendChild(messageDiv);
+    
+    chatContainer.appendChild(wrapperDiv);
     chatContainer.scrollTop = chatContainer.scrollHeight;
   }
 
@@ -160,6 +179,63 @@ document.addEventListener('DOMContentLoaded', () => {
     console.error('❌ 找不到测试 Markdown 按钮元素');
   }
 
+  // 配置按钮
+  console.log('🔵 配置按钮元素:', configBtn);
+  if (configBtn) {
+    configBtn.addEventListener('click', () => {
+      console.log('⚙️ 点击了配置按钮');
+      console.log('⚙️ 发送 openConfig 消息');
+      vscode.postMessage({ type: 'openConfig' });
+    });
+    console.log('✅ 配置按钮事件已绑定');
+  } else {
+    console.error('❌ 找不到配置按钮元素');
+  }
+
+  // 模式切换选择器
+  if (modeSelect) {
+    modeSelect.addEventListener('change', (e) => {
+      const agentMode = e.target.value === 'agent';
+      currentAgentMode = agentMode;
+      
+      // 显示/隐藏 Agent 选择器
+      if (agentMode) {
+        agentSelectorGroup.classList.add('visible');
+      } else {
+        agentSelectorGroup.classList.remove('visible');
+      }
+      
+      // 发送消息到后端
+      vscode.postMessage({ type: 'toggleAgentMode', enabled: agentMode });
+      console.log('🔄 切换到', agentMode ? 'Agent 模式' : '直接模式');
+    });
+    console.log('✅ 模式切换选择器已绑定');
+  } else {
+    console.error('❌ 找不到模式选择器元素');
+  }
+
+  // Agent 选择器
+  if (agentSelect) {
+    agentSelect.addEventListener('change', (e) => {
+      vscode.postMessage({ type: 'switchAgent', agentId: e.target.value });
+      console.log('🤖 切换到 Agent:', e.target.value);
+    });
+    console.log('✅ Agent 选择器已绑定');
+  } else {
+    console.error('❌ 找不到 Agent 选择器元素');
+  }
+
+  // Model 选择器
+  if (modelSelect) {
+    modelSelect.addEventListener('change', (e) => {
+      vscode.postMessage({ type: 'switchModel', modelId: e.target.value });
+      console.log('📦 切换到 Model:', e.target.value);
+    });
+    console.log('✅ Model 选择器已绑定');
+  } else {
+    console.error('❌ 找不到 Model 选择器元素');
+  }
+
   window.addEventListener('message', (event) => {
     const message = event.data;
     
@@ -182,8 +258,101 @@ document.addEventListener('DOMContentLoaded', () => {
       case 'model':
         currentModelEl.textContent = message.modelName;
         break;
+      case 'modelLoaded':
+        // 显示当前加载的模型信息
+        if (message.model) {
+          const modelName = message.model.modelName || message.model.name;
+          const provider = message.model.provider || '';
+          const agentMode = message.model.agentMode;
+          const agentName = message.model.agentName || '默认助手';
+          
+          currentModelEl.textContent = `${modelName}${provider ? ` (${provider})` : ''}`;
+          currentModelEl.style.color = 'var(--vscode-foreground)';
+          
+          // 更新模式选择器状态
+          if (modeSelect) {
+            modeSelect.value = agentMode ? 'agent' : 'direct';
+            currentAgentMode = agentMode;
+            
+            // 显示/隐藏 Agent 选择器
+            if (agentMode) {
+              agentSelectorGroup.classList.add('visible');
+            } else {
+              agentSelectorGroup.classList.remove('visible');
+            }
+          }
+          
+          // 更新 Agent 选择器
+          if (agentSelect && message.model.agentId) {
+            agentSelect.value = message.model.agentId;
+          }
+          
+          console.log('✅ 模型已加载:', {
+            model: modelName,
+            provider,
+            agentMode,
+            agentName
+          });
+        }
+        break;
+      case 'agentSwitched':
+        // Agent 切换成功
+        if (message.success && message.agentName) {
+          console.log('✅ Agent 已切换:', message.agentName);
+          // 可以添加提示信息
+        }
+        break;
+      case 'configLoaded':
+        // 加载配置信息
+        if (message.config) {
+          const config = message.config;
+          
+          // 更新模式选择器
+          if (modeSelect) {
+            modeSelect.value = config.agentModeEnabled ? 'agent' : 'direct';
+            currentAgentMode = config.agentModeEnabled;
+            
+            if (config.agentModeEnabled) {
+              agentSelectorGroup.classList.add('visible');
+            } else {
+              agentSelectorGroup.classList.remove('visible');
+            }
+          }
+          
+          // 更新 Agent 选择器
+          if (agentSelect) {
+            agentSelect.value = config.currentAgent || 'default';
+          }
+          
+          // 更新 Model 选择器
+          if (modelSelect && config.defaultModel) {
+            modelSelect.innerHTML = `<option value="${config.defaultModel}">${config.defaultModel}</option>`;
+          }
+        }
+        break;
+      case 'agentList':
+        // 填充 Agent 列表
+        if (message.agents && Array.isArray(message.agents)) {
+          if (agentSelect) {
+            agentSelect.innerHTML = message.agents.map(agent => 
+              `<option value="${agent.id}">${agent.name}</option>`
+            ).join('');
+          }
+        }
+        break;
+      case 'modelList':
+        // 填充 Model 列表
+        if (message.models && Array.isArray(message.models)) {
+          if (modelSelect) {
+            modelSelect.innerHTML = message.models.map(model => 
+              `<option value="${model.name}">${model.name}${model.modelName ? ` (${model.modelName})` : ''}</option>`
+            ).join('');
+          }
+        }
+        break;
     }
   });
 
+  // 请求配置信息
   vscode.postMessage({ type: 'ready' });
 });

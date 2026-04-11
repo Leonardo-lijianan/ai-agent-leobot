@@ -17,7 +17,9 @@ body {
 #chatContainer {
   flex: 1;
   overflow-y: auto;
-  padding: 16px;
+  padding: 0 16px 16px 16px;
+  display: flex;
+  flex-direction: column;
 }
 
 .welcome {
@@ -49,11 +51,25 @@ body {
   line-height: 1.6;
 }
 
-.message {
+.message-wrapper {
+  display: flex;
   margin-bottom: 16px;
+  flex-direction: column;
+}
+
+.message-wrapper.user {
+  align-items: flex-end;
+}
+
+.message-wrapper.assistant {
+  align-items: flex-start;
+}
+
+.message {
   padding: 12px;
   border-radius: 8px;
   background-color: var(--vscode-editor-background);
+  width: 100%;
 }
 
 .message.user {
@@ -74,9 +90,13 @@ body {
 
 .message-role {
   font-weight: 600;
-  margin-bottom: 8px;
-  font-size: 0.9em;
-  opacity: 0.8;
+  font-size: 0.85em;
+  padding: 4px 8px;
+  border-radius: 4px;
+  background-color: var(--vscode-badge-background);
+  color: var(--vscode-badge-foreground);
+  margin-bottom: 6px;
+  flex-shrink: 0;
 }
 
 .message-content {
@@ -283,6 +303,68 @@ body {
   background-color: var(--vscode-sideBar-background);
 }
 
+.button-row {
+  display: flex;
+  gap: 8px;
+  margin-top: 8px;
+}
+
+/* 控制栏样式 */
+.control-bar {
+  display: flex !important;
+  flex-wrap: wrap;
+  gap: 12px;
+  padding: 12px 16px;
+  background-color: var(--vscode-editor-background);
+  border: 1px solid var(--vscode-widget-border);
+  border-radius: 4px;
+  align-items: center;
+  margin-bottom: 16px;
+  width: 100%;
+  box-sizing: border-box;
+}
+
+.control-group {
+  display: flex !important;
+  align-items: center;
+  gap: 6px;
+}
+
+.control-label {
+  font-size: 0.85em;
+  color: var(--vscode-descriptionForeground);
+  white-space: nowrap;
+}
+
+.control-select {
+  padding: 4px 8px;
+  border: 1px solid var(--vscode-input-border);
+  border-radius: 4px;
+  background-color: var(--vscode-input-background);
+  color: var(--vscode-input-foreground);
+  font-size: var(--vscode-font-size);
+  cursor: pointer;
+  min-width: 120px;
+}
+
+.control-select:focus {
+  outline: 1px solid var(--vscode-focusBorder);
+}
+
+#agentSelectorGroup {
+  display: none;
+}
+
+#agentSelectorGroup.visible {
+  display: flex;
+}
+
+.chat-content {
+  flex: 1;
+  overflow-y: auto;
+  padding: 16px;
+}
+
 .model-info {
   font-size: 0.85em;
   color: var(--vscode-descriptionForeground);
@@ -331,6 +413,13 @@ button:disabled {
 }
 
 #testMarkdownBtn {
+  background-color: var(--vscode-button-secondaryBackground) !important;
+  color: var(--vscode-button-secondaryForeground) !important;
+  cursor: pointer !important;
+  pointer-events: auto !important;
+}
+
+#configBtn {
   background-color: var(--vscode-button-secondaryBackground) !important;
   color: var(--vscode-button-secondaryForeground) !important;
   cursor: pointer !important;

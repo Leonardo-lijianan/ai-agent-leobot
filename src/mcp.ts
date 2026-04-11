@@ -1,6 +1,7 @@
 import * as vscode from 'vscode';
 import * as fs from 'fs';
 import * as path from 'path';
+import { Logger } from './logger.js';
 
 export interface MCPResource {
   uri: string;
@@ -50,37 +51,35 @@ export class MCPFileSystem {
       } else {
         // 最后使用用户主目录作为 fallback，而不是插件安装目录
         this.workspaceRoot = require('os').homedir();
-        console.warn('⚠️ [MCP] 未检测到工作区或活动文件，使用用户主目录:', this.workspaceRoot);
+        Logger.warn('未检测到工作区或活动文件，使用用户主目录', { path: this.workspaceRoot });
       }
     }
-    console.log('🔵 [MCP] 工作空间目录:', this.workspaceRoot);
+    Logger.debug('工作空间目录已设置', { path: this.workspaceRoot });
   }
 
   private resolvePath(filePath: string): string {
-    // 如果是相对路径（以 . 或 .. 开头，或不包含盘符），则基于工作空间目录解析
     const isRelative = !path.isAbsolute(filePath);
     if (isRelative) {
       const resolvedPath = path.join(this.workspaceRoot, filePath);
-      console.log(`🔵 [MCP] 解析相对路径：${filePath} -> ${resolvedPath}`);
+      Logger.debug('解析相对路径', { original: filePath, resolved: resolvedPath });
       return resolvedPath;
     }
-    // 绝对路径直接返回
     const resolvedPath = path.resolve(filePath);
-    console.log(`🔵 [MCP] 解析绝对路径：${filePath} -> ${resolvedPath}`);
+    Logger.debug('解析绝对路径', { original: filePath, resolved: resolvedPath });
     return resolvedPath;
   }
 
   async readFile(filePath: string): Promise<string> {
     const resolvedPath = this.resolvePath(filePath);
-    console.log(`🔵 [MCP] 读取文件：${resolvedPath}`);
+    Logger.debug('读取文件', { path: resolvedPath });
     
     if (!fs.existsSync(resolvedPath)) {
-      throw new Error(`文件不存在：${resolvedPath}`);
+      Logger.errorAndThrow(`文件不存在：${resolvedPath}`);
     }
 
     const stat = fs.statSync(resolvedPath);
     if (stat.isDirectory()) {
-      throw new Error(`路径是目录而非文件：${resolvedPath}`);
+      Logger.errorAndThrow(`路径是目录而非文件：${resolvedPath}`);
     }
 
     return fs.readFileSync(resolvedPath, 'utf-8');
@@ -88,7 +87,7 @@ export class MCPFileSystem {
 
   async writeFile(filePath: string, content: string): Promise<void> {
     const resolvedPath = this.resolvePath(filePath);
-    console.log(`🔵 [MCP] 写入文件：${resolvedPath}`);
+    Logger.debug('写入文件', { path: resolvedPath });
     
     const dir = path.dirname(resolvedPath);
     if (!fs.existsSync(dir)) {
@@ -100,11 +99,11 @@ export class MCPFileSystem {
 
   async listDirectory(dirPath: string): Promise<{ name: string; type: 'file' | 'directory'; size?: number }[]> {
     const resolvedPath = this.resolvePath(dirPath);
-    console.log(`🔵 [MCP] 列出目录：${resolvedPath}`);
+    Logger.debug('列出目录', { path: resolvedPath });
 
     const stat = fs.statSync(resolvedPath);
     if (!stat.isDirectory()) {
-      throw new Error(`路径是文件而非目录：${resolvedPath}`);
+      Logger.errorAndThrow(`路径是文件而非目录：${resolvedPath}`);
     }
 
     const entries = fs.readdirSync(resolvedPath, { withFileTypes: true });
@@ -125,7 +124,7 @@ export class MCPFileSystem {
 
   async searchFiles(pattern: string, basePath?: string): Promise<string[]> {
     const searchPath = basePath ? path.resolve(basePath) : this.workspaceRoot;
-    console.log(`🔵 [MCP] 搜索文件，路径：${searchPath}, 模式：${pattern}`);
+    Logger.debug('搜索文件', { path: searchPath, pattern });
     
     const results: string[] = [];
     const globPattern = new vscode.RelativePattern(searchPath, `**/${pattern}`);
@@ -268,7 +267,7 @@ export class MCPServer {
         const resolvedPath = this.fileSystem['resolvePath'](args.filePath);
         
         if (!fs.existsSync(resolvedPath)) {
-          throw new Error(`文件不存在：${resolvedPath}`);
+          Logger.errorAndThrow(`文件不存在：${resolvedPath}`);
         }
 
         const fileContent = fs.readFileSync(resolvedPath, 'utf-8');
@@ -276,7 +275,7 @@ export class MCPServer {
         const totalLines = lines.length;
 
         if (args.afterLine < 0 || args.afterLine > totalLines) {
-          throw new Error(`无效的行号：${args.afterLine}，文件总共有 ${totalLines} 行`);
+          Logger.errorAndThrow(`无效的行号：${args.afterLine}，文件总共有 ${totalLines} 行`);
         }
 
         // 在指定位置插入新行
@@ -314,6 +313,13 @@ export class MCPServer {
     return this.tools.get(name);
   }
 
+  /**
+   * 获取所有 MCP 工具（供 ToolRegistry 使用）
+   */
+  getTools(): MCPTool[] {
+    return Array.from(this.tools.values());
+  }
+
   listTools(): MCPTool[] {
     return Array.from(this.tools.values());
   }
@@ -321,13 +327,13 @@ export class MCPServer {
   async executeTool(name: string, args: any): Promise<any> {
     const tool = this.getTool(name);
     if (!tool) {
-      throw new Error(`工具不存在：${name}`);
+      Logger.errorAndThrow(`工具不存在：${name}`);
     }
 
     try {
       return await tool.handler(args);
     } catch (error: any) {
-      throw new Error(`工具执行失败 [${name}]: ${error.message}`);
+      Logger.errorAndThrow(`工具执行失败 [${name}]: ${error.message}`);
     }
   }
 

@@ -1,9 +1,10 @@
 export interface ModelConfig {
   name: string;
-  type: 'openai' | 'anthropic' | 'ollama' | 'custom';
+  type: 'openai' | 'anthropic' | 'ollama' | 'gemini' | 'custom' | 'siliconflow';
   apiKey?: string;
   endpoint?: string;
   model?: string;
+  modelName?: string; // 实际使用的模型名称
 }
 
 export interface SkillConfig {

@@ -1,9 +1,10 @@
 import * as vscode from 'vscode';
 import * as fs from 'fs';
 import * as path from 'path';
-import { Message } from './types';
-import { ConfigManager } from './configManager';
-import { createModelAdapter, ModelAdapter } from './modelAdapter';
+import { Message, ModelConfig } from './types.js';
+import { ModelConfigManager } from './modelConfigManager.js';
+import { createModelAdapter, ModelAdapter } from './modelAdapter.js';
+import { agentManager } from './agentManager.js';
 
 export class ChatViewProvider implements vscode.WebviewViewProvider {
   public static readonly viewType = 'ai-agent-leobot-chat';
@@ -11,14 +12,16 @@ export class ChatViewProvider implements vscode.WebviewViewProvider {
   private _messages: Message[] = [];
   private _modelAdapter: ModelAdapter | null = null;
   private _currentModel: string = '';
+  private _currentAgentId: string = 'default';
+  private _agentModeEnabled: boolean = true;
   private _systemPromptAdded = false;
 
   constructor(
     private readonly _extensionPath: string,
-    private readonly _configManager: ConfigManager
+    private readonly _configManager: ModelConfigManager
   ) {}
 
-  public resolveWebviewView(
+  public async resolveWebviewView(
     webviewView: vscode.WebviewView,
     context: vscode.WebviewViewResolveContext,
     _token: vscode.CancellationToken
@@ -42,16 +45,80 @@ export class ChatViewProvider implements vscode.WebviewViewProvider {
     webviewView.webview.html = this._getHtmlForWebview(webviewView.webview, testMarkdownText);
 
     this._setupWebviewMessageListener();
-    this._initializeModel();
+    // 先初始化模型，但不等待完成，让视图尽快显示
+    // 实际的模型配置会在收到 ready 消息后重新初始化并发送
+    this._initializeModel(false).catch(err => {
+      console.error('视图初始化模型失败:', err);
+    });
   }
 
-  private async _initializeModel() {
-    const defaultModel = this._configManager.getDefaultModel();
-    const modelConfig = this._configManager.getModelByName(defaultModel);
+  private async _initializeModel(sendMessage: boolean = true) {
+    // 获取当前配置
+    const config = await this._configManager.getCurrentAgentAndModel();
+    this._agentModeEnabled = config.agentModeEnabled;
+    this._currentAgentId = config.currentAgent;
     
+    // 确定使用哪个模型
+    let modelToUse: string;
+    
+    if (this._agentModeEnabled) {
+      // Agent 模式：使用 Agent 关联的模型
+      const agent = agentManager.getAgent(this._currentAgentId);
+      if (agent) {
+        // 如果 Agent 有指定的 modelId，使用它；否则使用 defaultModel
+        modelToUse = agent.modelId && agent.modelId !== 'default' 
+          ? agent.modelId 
+          : config.defaultModel;
+      } else {
+        // Agent 不存在，回退到 defaultModel
+        modelToUse = config.defaultModel;
+      }
+    } else {
+      // 直接模式：直接使用 defaultModel
+      modelToUse = config.defaultModel;
+    }
+    
+    // 初始化 Model Adapter
+    const modelConfig = this._configManager.getModelByName(modelToUse);
     if (modelConfig) {
-      this._currentModel = defaultModel;
+      this._currentModel = modelToUse;
+      
+      // 从配置文件读取 API Key（已解密）
+      const apiKey = await this._configManager.getApiKey(modelToUse);
+      if (apiKey) {
+        modelConfig.apiKey = apiKey;
+      }
+      
       this._modelAdapter = createModelAdapter(modelConfig);
+      
+      // 更新 UI 显示当前模型和 Agent 信息
+      if (sendMessage) {
+        this._view?.webview.postMessage({
+          type: 'modelLoaded',
+          model: {
+            name: modelToUse,
+            modelName: modelConfig.modelName || '',
+            provider: modelConfig.type,
+            agentMode: this._agentModeEnabled,
+            agentId: this._currentAgentId,
+            agentName: agentManager.getAgent(this._currentAgentId)?.name || '默认助手'
+          }
+        });
+      }
+      
+      console.log('模型初始化成功', {
+        model: modelToUse,
+        agentMode: this._agentModeEnabled,
+        agentId: this._currentAgentId
+      });
+    } else {
+      console.error('模型配置不存在', { model: modelToUse });
+      if (sendMessage) {
+        this._view?.webview.postMessage({
+          type: 'error',
+          content: `模型 "${modelToUse}" 配置不存在，请检查配置`
+        });
+      }
     }
   }
 
@@ -62,13 +129,77 @@ export class ChatViewProvider implements vscode.WebviewViewProvider {
           await this._handleSendMessage(message.content);
           break;
         case 'ready':
+          // 前端已准备好，发送模型配置信息
+          await this._initializeModel(true);
+          await this._sendConfigToWebview();
           await this._sendMessagesToWebview();
           break;
         case 'config':
           await this._initializeModel();
           break;
+        case 'toggleAgentMode':
+          await this.toggleAgentMode(message.enabled);
+          break;
+        case 'openConfig':
+          console.log('⚙️ 收到 openConfig 消息');
+          await vscode.commands.executeCommand('ai-agent-leobot.configure');
+          break;
       }
     });
+  }
+
+  private async _sendConfigToWebview() {
+    if (!this._view) return;
+    
+    try {
+      // 获取配置
+      const config = await this._configManager.getCurrentAgentAndModel();
+      
+      // 获取所有 Agent
+      const agents = agentManager.getAllAgents();
+      
+      // 获取所有 Models
+      const models = this._configManager.getModels();
+      
+      // 发送配置信息
+      this._view.webview.postMessage({
+        type: 'configLoaded',
+        config: {
+          agentModeEnabled: config.agentModeEnabled,
+          currentAgent: config.currentAgent,
+          defaultModel: config.defaultModel
+        }
+      });
+      
+      // 发送 Agent 列表
+      this._view.webview.postMessage({
+        type: 'agentList',
+        agents: agents.map(a => ({
+          id: a.id,
+          name: a.name
+        }))
+      });
+      
+      // 发送 Model 列表
+      this._view.webview.postMessage({
+        type: 'modelList',
+        models: models.map(m => ({
+          name: m.name,
+          modelName: m.modelName || '',
+          type: m.type
+        }))
+      });
+      
+      console.log('已发送配置信息到前端', {
+        agentModeEnabled: config.agentModeEnabled,
+        currentAgent: config.currentAgent,
+        defaultModel: config.defaultModel,
+        agentsCount: agents.length,
+        modelsCount: models.length
+      });
+    } catch (error: any) {
+      console.error('发送配置信息失败', error);
+    }
   }
 
   private async _handleSendMessage(content: string) {
@@ -89,35 +220,21 @@ export class ChatViewProvider implements vscode.WebviewViewProvider {
 
     const messagesToSend: Message[] = [...this._messages];
 
-    if (!this._systemPromptAdded) {
-      const systemPrompt = `你是一个智能编程助手，可以访问本地文件系统来帮助用户完成编程任务。
-
-你拥有以下工具能力：
-1. read_file - 读取文件内容
-2. write_file - 写入/修改文件内容  
-3. list_directory - 列出目录内容
-4. search_files - 搜索文件
-5. insert_lines - 在文件指定位置插入行
-
-**工作流程：**
-1. 如果用户明确要求修改/添加内容 → **直接使用 write_file 或 insert_lines**，不要先读取
-2. 如果用户要求查看文件 → 使用 read_file
-3. 如果需要了解文件内容才能修改 → 先 read_file，然后立即 write_file/insert_lines
-
-**重要规则：**
-- 工具调用后，你会看到工具执行结果
-- 根据工具结果继续下一步操作，**不要重复调用相同的工具**
-- 如果用户明确要求修改文件，**不要先读取再修改，直接修改**
-- 最多进行 3 次工具调用循环
-
-请根据用户的具体需求选择合适的工具。`;
-
-      messagesToSend.unshift({
-        role: 'system',
-        content: systemPrompt,
-        timestamp: Date.now()
-      });
-      this._systemPromptAdded = true;
+    // 只在 Agent 模式下添加 System Prompt
+    if (this._agentModeEnabled && !this._systemPromptAdded) {
+      const agent = agentManager.getAgent(this._currentAgentId);
+      if (agent && agent.systemPrompt) {
+        messagesToSend.unshift({
+          role: 'system',
+          content: agent.systemPrompt,
+          timestamp: Date.now()
+        });
+        this._systemPromptAdded = true;
+        console.log('已添加 Agent System Prompt', { 
+          agentId: this._currentAgentId,
+          agentName: agent.name 
+        });
+      }
     }
 
     try {
@@ -160,6 +277,24 @@ export class ChatViewProvider implements vscode.WebviewViewProvider {
     });
   }
 
+  async toggleAgentMode(enabled: boolean) {
+    // 保存配置
+    await this._configManager.setAgentModeEnabled(enabled);
+    this._agentModeEnabled = enabled;
+    this._systemPromptAdded = false;
+    
+    // 重新初始化模型
+    await this._initializeModel();
+    
+    // 清空消息历史
+    this._messages = [];
+    this._view?.webview.postMessage({
+      type: 'clear'
+    });
+    
+    console.log('Agent 模式已切换', { enabled });
+  }
+
   private _getHtmlForWebview(webview: vscode.Webview, testMarkdownText: string): string {
     const scriptUri = webview.asWebviewUri(
       vscode.Uri.joinPath(vscode.Uri.file(this._extensionPath), 'media', 'chatView.js')
@@ -178,17 +313,45 @@ export class ChatViewProvider implements vscode.WebviewViewProvider {
 </head>
 <body>
   <div id="chatContainer">
-    <div class="welcome">
-      <h2>🤖 AI Agent LeoBot</h2>
-      <p>你好！我是 LeoBot，你的 AI 编程助手。</p>
-      <p>我可以帮你：</p>
-      <ul>
-        <li>编写和调试代码</li>
-        <li>解释代码逻辑</li>
-        <li>回答编程问题</li>
-        <li>提供代码优化建议</li>
-      </ul>
-      <p>请输入消息开始交流！</p>
+    <!-- 顶部控制栏 -->
+    <div class="control-bar">
+      <div class="control-group">
+        <label class="control-label">模式：</label>
+        <select id="modeSelect" class="control-select">
+          <option value="agent">🤖 Agent 模式</option>
+          <option value="direct">⚡ 直接模式</option>
+        </select>
+      </div>
+      
+      <div class="control-group" id="agentSelectorGroup">
+        <label class="control-label">Agent：</label>
+        <select id="agentSelect" class="control-select">
+          <option value="default">默认助手</option>
+        </select>
+      </div>
+      
+      <div class="control-group">
+        <label class="control-label">模型：</label>
+        <select id="modelSelect" class="control-select">
+          <option value="">加载中...</option>
+        </select>
+      </div>
+    </div>
+    
+    <!-- 聊天区域 -->
+    <div class="chat-content">
+      <div class="welcome">
+        <h2>🤖 AI Agent LeoBot</h2>
+        <p>你好！我是 LeoBot，你的 AI 编程助手。</p>
+        <p>我可以帮你：</p>
+        <ul>
+          <li>编写和调试代码</li>
+          <li>解释代码逻辑</li>
+          <li>回答编程问题</li>
+          <li>提供代码优化建议</li>
+        </ul>
+        <p>请输入消息开始交流！</p>
+      </div>
     </div>
   </div>
   
@@ -198,8 +361,9 @@ export class ChatViewProvider implements vscode.WebviewViewProvider {
       <textarea id="messageInput" placeholder="输入消息，按 Ctrl+Enter 发送..." rows="3"></textarea>
       <button id="sendButton" title="发送 (Ctrl+Enter)">发送</button>
     </div>
-    <div class="input-wrapper" style="margin-top: 8px;">
-      <button id="testMarkdownBtn" title="测试 Markdown 渲染" style="background-color: var(--vscode-button-secondaryBackground);">测试 Markdown</button>
+    <div class="button-row">
+      <button id="testMarkdownBtn">测试 Markdown</button>
+      <button id="configBtn">⚙️ 配置</button>
     </div>
   </div>
   

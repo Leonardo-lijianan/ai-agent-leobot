@@ -1,10 +1,12 @@
 import * as vscode from 'vscode';
-import { PluginConfig, ModelConfig } from './types';
+import { PluginConfig, ModelConfig } from './types.js';
+import { agentManager } from './agentManager.js';
 
 const CONFIG_KEY = 'aiAgentLeoBot';
 
 export class ConfigManager {
   private static instance: ConfigManager;
+  private _context?: vscode.ExtensionContext;
   
   private constructor() {}
 
@@ -13,6 +15,14 @@ export class ConfigManager {
       ConfigManager.instance = new ConfigManager();
     }
     return ConfigManager.instance;
+  }
+
+  setContext(context: vscode.ExtensionContext) {
+    this._context = context;
+  }
+
+  getContext(): vscode.ExtensionContext | undefined {
+    return this._context;
   }
 
   getModels(): ModelConfig[] {
@@ -49,6 +59,15 @@ export class ConfigManager {
   }
 
   async getApiKey(modelName: string): Promise<string | undefined> {
+    // 优先从 SecretStorage 读取 API Key
+    if (this._context) {
+      const secretKey = await this._context.secrets.get('api-key');
+      if (secretKey) {
+        return secretKey;
+      }
+    }
+    
+    // 回退到 settings.json
     const models = this.getModels();
     const model = models.find(m => m.name === modelName);
     return model?.apiKey;
@@ -67,5 +86,19 @@ export class ConfigManager {
   getModelByName(name: string): ModelConfig | undefined {
     const models = this.getModels();
     return models.find(m => m.name === name);
+  }
+
+  async getCurrentAgent(): Promise<string> {
+    const config = vscode.workspace.getConfiguration(CONFIG_KEY);
+    return config.get<string>('currentAgent', 'default');
+  }
+
+  async setCurrentAgent(agentId: string): Promise<void> {
+    const config = vscode.workspace.getConfiguration(CONFIG_KEY);
+    await config.update('currentAgent', agentId, vscode.ConfigurationTarget.Global);
+  }
+
+  getAllAgents() {
+    return agentManager.getAllAgents();
   }
 }
