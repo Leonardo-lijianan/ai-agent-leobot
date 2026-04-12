@@ -1,5 +1,5 @@
-import { Skill, Tool, MCPTool } from './types.js';
-import { Logger } from './logger.js';
+import { Skill, Tool, MCPTool } from '../types.js';
+import { Logger } from '../utils/Logger.js';
 
 /**
  * 工具注册表

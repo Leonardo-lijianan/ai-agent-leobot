@@ -308,3 +308,280 @@ changes: undefined
 - **0.0.1** - 基础功能
 
 现在版本号和更新日志都正确了！🎉
+
+可以的！`npm run package` 仍然可以正常打包。让我测试一下：
+
+
+        
+            
+toolName: run_command
+            
+status: success
+          
+command: npm run package undefined
+          
+✅ **完全可以打包！**
+
+## 📦 打包流程
+
+`npm run package` 执行流程：
+
+```bash
+npm run package
+  ↓
+vsce package
+  ↓
+vscode:prepublish 脚本
+  ↓
+1. npm run compile:backend   # 编译后端 TypeScript
+2. npm run compile:frontend  # 编译前端 TypeScript
+3. node esbuild.js --production  # ESBuild 打包（压缩）
+  ↓
+生成 .vsix 文件
+```
+
+### 📊 打包结果
+
+```
+打包大小：352.53 KB
+文件数量：14 个文件
+├─ dist/extension.cjs [1.19 MB]  ← 所有代码和依赖（压缩后 352 KB）
+└─ media/ (5 个文件)
+```
+
+### 🔄 工作流程对比
+
+| 场景 | 命令 | 用途 |
+|------|------|------|
+| **开发调试** | `Ctrl+Shift+B` → `F5` | 后台监听，快速调试 |
+| **本地打包** | `npm run package` | 生成 VSIX 文件测试 |
+| **发布扩展** | `npm run package` | 发布前打包 |
+
+### 💡 总结
+
+- ✅ **开发时**：使用 `Ctrl+Shift+B` + `F5`，快速调试
+- ✅ **发布时**：使用 `npm run package`，完整打包
+- ✅ **两种模式互不干扰**，各司其职！
+
+现在你的开发体验应该提升很多了！🚀
+
+非常好！🎯 **计划优先**，先更新架构文档，明确方向再行动！
+
+让我先读取当前的文档，然后更新：
+
+
+        
+            
+toolName: view_files
+            
+status: success
+          
+            
+filePath: d:\Code\nodejsProgram\VibeCodingEx\ai-agent-leobot\docs\现实情况.md
+          
+
+        
+            
+toolName: search_by_regex
+            
+status: success
+          
+query: ## \d+\.
+          
+
+        
+            
+toolName: view_files
+            
+status: success
+          
+            
+filePath: d:\Code\nodejsProgram\VibeCodingEx\ai-agent-leobot\docs\现实情况.md
+          
+现在我来更新两个文档，添加 `ModelManager` 的架构设计：
+
+
+        
+            
+toolName: edit_file_search_replace
+            
+status: success
+          
+            
+filePath: d:\Code\nodejsProgram\VibeCodingEx\ai-agent-leobot\docs\现实情况.md
+          
+changes: undefined
+          
+现在更新系统架构图，添加 `ModelManager`：
+
+
+        
+            
+toolName: view_files
+            
+status: success
+          
+            
+filePath: d:\Code\nodejsProgram\VibeCodingEx\ai-agent-leobot\docs\现实情况.md
+          
+
+        
+            
+toolName: edit_file_search_replace
+            
+status: success
+          
+            
+filePath: d:\Code\nodejsProgram\VibeCodingEx\ai-agent-leobot\docs\现实情况.md
+          
+changes: undefined
+          
+现在更新模块依赖关系图：
+
+
+        
+            
+toolName: view_files
+            
+status: success
+          
+            
+filePath: d:\Code\nodejsProgram\VibeCodingEx\ai-agent-leobot\docs\现实情况.md
+          
+
+        
+            
+toolName: edit_file_search_replace
+            
+status: success
+          
+            
+filePath: d:\Code\nodejsProgram\VibeCodingEx\ai-agent-leobot\docs\现实情况.md
+          
+changes: undefined
+          
+现在更新 `架构问题.md`，添加 `ModelManager` 相关内容：
+
+
+        
+            
+toolName: view_files
+            
+status: success
+          
+            
+filePath: d:\Code\nodejsProgram\VibeCodingEx\ai-agent-leobot\docs\架构问题.md
+          
+
+        
+            
+toolName: edit_file_search_replace
+            
+status: success
+          
+            
+filePath: d:\Code\nodejsProgram\VibeCodingEx\ai-agent-leobot\docs\架构问题.md
+          
+changes: undefined
+          
+现在更新问题汇总表，添加 ModelManager 相关内容：
+
+
+        
+            
+toolName: edit_file_search_replace
+            
+status: success
+          
+            
+filePath: d:\Code\nodejsProgram\VibeCodingEx\ai-agent-leobot\docs\架构问题.md
+          
+changes: undefined
+          
+现在更新总结部分：
+
+
+        
+            
+toolName: edit_file_search_replace
+            
+status: success
+          
+            
+filePath: d:\Code\nodejsProgram\VibeCodingEx\ai-agent-leobot\docs\架构问题.md
+          
+changes: undefined
+          
+完美！✅ 架构文档已更新完成！让我总结一下更新内容：
+
+## 📋 架构文档更新完成
+
+### ✅ 已更新的文件
+
+1. **`docs/现实情况.md`**
+   - ✅ 更新了系统架构图（标记为"计划中"）
+   - ✅ 添加了 `ModelManager` 到架构图中
+   - ✅ 更新了模块依赖关系图
+   - ✅ 更新了关键差异总结
+   - ✅ 添加了 `ModelManager` 的详细职责说明
+   - ✅ 标记了优先级（高/中/低）
+
+2. **`docs/架构问题.md`**
+   - ✅ 添加了"创建 ModelManager"到修复建议（第一阶段高优先级）
+   - ✅ 更新了问题汇总表（添加 2 个新问题）
+   - ✅ 更新了总结部分
+
+### 🎯 新增架构设计
+
+#### 计划中的架构层次
+
+```
+配置层
+├── ModelConfigManager     // 管理 modelConfig.json
+└── AgentConfigManager     // 管理 agentConfig.json
+    ↓ 依赖
+业务层 ⭐ 新增 ModelManager
+├── ModelManager          // ⭐ 统一管理模型运行时
+└── AgentManager          // 管理 Agent 运行时
+    ↓ 使用
+适配层
+└── modelAdapter.ts       // 适配器实现
+```
+
+#### ModelManager 的职责
+
+- ✅ 管理 ModelAdapter 的创建和缓存
+- ✅ 提供统一的模型访问接口
+- ✅ 处理模型切换
+- ✅ 提供模型变化通知（事件驱动）
+
+#### 依赖关系
+
+- `ModelManager` → `ModelConfigManager`（获取配置）
+- `ModelManager` → `createModelAdapter()`（创建适配器）
+- `ChatView` → `ModelManager`（使用模型）
+
+### 📊 问题汇总（共 11 个）
+
+| 状态 | 数量 | 问题 |
+|------|------|------|
+| ✅ 已修复 | 2 | 循环依赖风险、职责不清的方法 |
+| ⏳ 待修复 | 9 | 事件驱动、ModelManager、Agent 缓存等 |
+
+### 🎯 下一步计划
+
+**第一阶段（高优先级）**：
+1. ✅ ~~移除循环依赖~~ - 已完成
+2. ⏳ 添加事件驱动机制
+3. ⭐ 创建 ModelManager
+
+**第二阶段（中优先级）**：
+4. ⏳ 优化 Agent 加载
+5. ⏳ 清理冗余代码
+6. ⏳ 处理 skills.ts
+
+**第三阶段（低优先级）**：
+7. ⏳ 代码规范统一
+8. ⏳ 完善适配器
+
+架构文档更新完成！现在有了清晰的计划和方向！🚀

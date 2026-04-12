@@ -1,10 +1,10 @@
 import * as vscode from 'vscode';
 import * as fs from 'fs';
-import { ModelConfigManager } from './modelConfigManager.js';
-import { AgentConfigManager } from './agentConfigManager.js';
-import { Logger } from './logger.js';
-import { ModelConfig, AgentConfig } from './types.js';
-import { createModelAdapter } from './modelAdapter.js';
+import { ModelConfigManager } from '../managers/ModelConfigManager.js';
+import { AgentConfigManager } from '../managers/AgentConfigManager.js';
+import { Logger } from '../utils/Logger.js';
+import { ModelConfig, AgentConfig } from '../types.js';
+import { createModelAdapter } from '../adapters/modelAdapter.js';
 
 export class ConfigPanel {
   private panel: vscode.WebviewPanel;
@@ -26,7 +26,7 @@ export class ConfigPanel {
     this.context = context;
     
     const scriptUri = panel.webview.asWebviewUri(
-      vscode.Uri.joinPath(context.extensionUri, 'out', 'configPanelView.js')
+      vscode.Uri.joinPath(context.extensionUri, 'media', 'configPanelView.js')
     );
     
     panel.webview.html = this.getHtmlForWebview(htmlPath, scriptUri);

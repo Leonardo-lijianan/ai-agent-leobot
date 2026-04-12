@@ -1,8 +1,8 @@
 import * as vscode from 'vscode';
 import * as fs from 'fs';
 import * as path from 'path';
-import { Logger } from './logger.js';
-import { MCPResource, MCPContent, MCPTool } from './types.js';
+import { Logger } from '../utils/Logger.js';
+import { MCPResource, MCPContent, MCPTool } from '../types.js';
 
 
 

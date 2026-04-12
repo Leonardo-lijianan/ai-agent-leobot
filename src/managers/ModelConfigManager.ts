@@ -1,11 +1,10 @@
 import * as vscode from 'vscode';
 import * as fs from 'fs';
 import * as path from 'path';
-import { ModelConfig } from './types.js';
-import { Logger } from './logger.js';
-import { agentManager } from './agentManager.js';
-import { encrypt, decrypt } from './crypto.js';
-import { AgentModelConfig, ModelConfigFile } from './types.js'
+import { ModelConfig } from '../types.js';
+import { Logger } from '../utils/Logger.js';
+import { encrypt, decrypt } from '../utils/crypto.js';
+import { AgentModelConfig, ModelConfigFile } from '../types.js'
 
 const CONFIG_FILE_NAME = 'modelConfig.json';
 
@@ -218,11 +217,6 @@ export class ModelConfigManager {
       currentAgent: config.currentAgent || 'default',
       defaultModel: config.defaultModel || '硅基流动'
     };
-  }
-
-  getAllAgents(): any[] {
-    // 从 agentManager 获取所有 Agent
-    return agentManager.getAllAgents();
   }
 
   getConfigFilePath(): string {

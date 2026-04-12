@@ -1,12 +1,12 @@
 import * as vscode from 'vscode';
 import * as fs from 'fs';
 import * as path from 'path';
-import { Message, ModelConfig, ModelAdapter } from './types.js';
-import { ModelConfigManager } from './modelConfigManager.js';
-import { createModelAdapter } from './modelAdapter.js';
-import { agentManager } from './agentManager.js';
-import { Logger } from './logger.js';
-import { chatHistoryManager } from './chatHistoryManager.js';
+import { Message, ModelConfig, ModelAdapter } from '../types.js';
+import { ModelConfigManager } from '../managers/ModelConfigManager.js';
+import { createModelAdapter } from '../adapters/modelAdapter.js';
+import { agentManager } from '../managers/AgentManager.js';
+import { Logger } from '../utils/Logger.js';
+import { chatHistoryManager } from '../managers/ChatHistoryManager.js';
 
 export class ChatViewProvider implements vscode.WebviewViewProvider {
   public static readonly viewType = 'ai-agent-leobot-chat';

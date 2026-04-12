@@ -1,8 +1,8 @@
 import * as vscode from 'vscode';
 import * as fs from 'fs';
 import * as path from 'path';
-import { Logger } from './logger.js';
-import { Message } from './types.js';
+import { Logger } from '../utils/Logger.js';
+import { Message } from '../types.js';
 
 const CHAT_HISTORY_DIR = 'chatHistories';
 

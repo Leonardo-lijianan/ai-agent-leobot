@@ -1,9 +1,9 @@
 import OpenAI from 'openai';
 import { GoogleGenAI } from '@google/genai';
-import { ModelConfig, Message } from './types.js';
-import { ToolRegistry } from './toolRegistry.js';
-import { Logger } from './logger.js';
-import { ModelAdapter } from './types.js'
+import { ModelConfig, Message } from '../types.js';
+import { ToolRegistry } from '../tools/ToolRegistry.js';
+import { Logger } from '../utils/Logger.js';
+import { ModelAdapter } from '../types.js'
 
 
 
@@ -32,7 +32,7 @@ export class OpenAIAdapter implements ModelAdapter {
     this.client = new OpenAI({
       apiKey: config.apiKey || '',
       baseURL: config.endpoint || 'https://api.siliconflow.cn/v1',
-      dangerouslyAllowBrowser: true
+      dangerouslyAllowBrowser: false // 必须是false!!!
     });
   }
 

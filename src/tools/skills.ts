@@ -1,8 +1,8 @@
 import * as vscode from 'vscode';
 import * as fs from 'fs';
 import * as path from 'path';
-import { Logger } from './logger.js';
-import { Skill } from './types.js';
+import { Logger } from '../utils/Logger.js';
+import { Skill } from '../types.js';
 
 export class FileReadSkill implements Skill {
   name = 'file-read';

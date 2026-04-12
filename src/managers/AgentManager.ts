@@ -1,6 +1,6 @@
-import { Logger } from './logger.js';
-import { AgentConfigManager } from './agentConfigManager.js';
-import { AgentConfig } from './types.js'
+import { Logger } from '../utils/Logger.js';
+import { AgentConfigManager } from './AgentConfigManager.js';
+import { AgentConfig } from '../types.js'
 
 
 /**
@@ -80,53 +80,31 @@ export class AgentManager {
    * 注册默认 Agent
    */
   private registerDefaultAgents() {
-    // 默认通用助手
-    this.registerAgent({
-      id: 'default',
-      name: '通用助手',
-      description: '通用的 AI 编程助手',
-      systemPrompt: this.getDefaultSystemPrompt(),
-      tools: ['read_file', 'write_file', 'list_directory', 'search_files', 'insert_lines']
-    });
+    if (!this.agentConfigManager) {
+      // AgentConfigManager 未初始化，抛出错误
+      Logger.errorAndThrow('AgentConfigManager 未初始化，无法加载默认 Agent');
+      return;
+    }
 
-    Logger.info('Agent 管理器已初始化', { 
-      agentCount: this.agents.size,
-      currentAgent: this.currentAgentId,
-      mode: this.agentConfigManager ? '配置文件' : '内存'
-    });
-  }
-
-  /**
-   * 获取默认系统提示词
-   */
-  public getDefaultSystemPrompt(): string {
-    return `你是 AI 助手，可访问本地文件系统帮助用户完成任务。
-
-## 基础工具（MCP）
-- read_file: 读取文件
-- write_file: 写入/修改文件
-- list_directory: 列出目录
-- search_files: 搜索文件
-- insert_lines: 插入内容
-
-## 高级技能（Skill）
-- refactor-code: 重构代码
-- add-feature: 添加功能
-- debug-issue: 调试问题
-
-## 工作流程
-1. 简单操作：直接用 MCP 工具（read_file/write_file/insert_lines 等）
-2. 复杂任务：用 Skill（refactor-code/add-feature/debug-issue）
-3. 需要查看：用 read_file
-
-## 规则
-- 工具调用后会看到执行结果
-- 不重复调用相同工具
-- 用户明确修改时直接修改，不先读取
-- 最多 5 次工具调用循环
-
-## 角色说明
-根据上下文和用户需求调整专业领域和表达方式。`;
+    try {
+      // 从配置文件加载 Agent，如果不存在则创建
+      const agents = this.agentConfigManager.getAgents();
+      this.agents.clear();
+      
+      for (const agent of agents) {
+        this.agents.set(agent.id, agent);
+      }
+      
+      this.currentAgentId = this.agentConfigManager.getDefaultAgent();
+      
+      Logger.info('从配置文件加载 Agent', { 
+        agentCount: this.agents.size,
+        currentAgent: this.currentAgentId 
+      });
+    } catch (error) {
+      Logger.error('加载 Agent 配置失败', error);
+      throw error;
+    }
   }
 
   /**

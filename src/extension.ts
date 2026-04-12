@@ -1,17 +1,15 @@
 import * as vscode from 'vscode';
-import { ChatViewProvider } from './chatView.js';
+import { ChatViewProvider } from './features/ChatView.js';
 import { ConfigManager } from './configManager.js';
-import { ModelConfigManager } from './modelConfigManager.js';
-import { AgentConfigManager } from './agentConfigManager.js';
-import { SkillManager } from './skills.js';
-import { createModelAdapter } from './modelAdapter.js';
-import { Logger } from './logger.js';
-import { agentManager } from './agentManager.js';
-import { ToolRegistry } from './toolRegistry.js';
-import { mcpServer } from './mcp.js';
-import { encrypt, decrypt, removeEncryptionKey } from './crypto.js';
-import { ConfigPanel } from './configPanel.js';
-import { chatHistoryManager } from './chatHistoryManager.js';
+import { ModelConfigManager } from './managers/ModelConfigManager.js';
+import { AgentConfigManager } from './managers/AgentConfigManager.js';
+import { SkillManager } from './tools/skills.js';
+import { Logger } from './utils/Logger.js';
+import { agentManager } from './managers/AgentManager.js';
+import { ToolRegistry } from './tools/ToolRegistry.js';
+import { mcpServer } from './tools/mcp.js';
+import { ConfigPanel } from './features/ConfigPanel.js';
+import { chatHistoryManager } from './managers/ChatHistoryManager.js';
 
 export function activate(context: vscode.ExtensionContext) {
   // 初始化日志系统
