@@ -352,11 +352,11 @@ body {
 }
 
 #agentSelectorGroup {
-  display: none;
+  display: none !important;
 }
 
 #agentSelectorGroup.visible {
-  display: flex;
+  display: flex !important;
 }
 
 .chat-content {

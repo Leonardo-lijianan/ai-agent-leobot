@@ -1,5 +1,5 @@
 import * as vscode from 'vscode';
-import { PluginConfig, ModelConfig } from './types.js';
+import { ModelConfig } from './types.js';
 import { agentManager } from './agentManager.js';
 
 const CONFIG_KEY = 'aiAgentLeoBot';
@@ -32,10 +32,11 @@ export class ConfigManager {
     if (models.length === 0) {
       return [
         {
-          name: '硅基流动',
-          type: 'openai',
+          id: '硅基流动',
+          protocolType: 'openai',
           endpoint: 'https://api.siliconflow.cn/v1',
-          apiKey: ''
+          apiKey: '',
+          modelId: 'Qwen/Qwen3.5-122B-A10B'
         }
       ];
     }
@@ -69,13 +70,13 @@ export class ConfigManager {
     
     // 回退到 settings.json
     const models = this.getModels();
-    const model = models.find(m => m.name === modelName);
+    const model = models.find(m => m.id === modelName);
     return model?.apiKey;
   }
 
   async updateApiKey(modelName: string, apiKey: string): Promise<void> {
     const models = this.getModels();
-    const modelIndex = models.findIndex(m => m.name === modelName);
+    const modelIndex = models.findIndex(m => m.id === modelName);
     
     if (modelIndex !== -1) {
       models[modelIndex].apiKey = apiKey;
@@ -85,7 +86,7 @@ export class ConfigManager {
 
   getModelByName(name: string): ModelConfig | undefined {
     const models = this.getModels();
-    return models.find(m => m.name === name);
+    return models.find(m => m.id === name);
   }
 
   async getCurrentAgent(): Promise<string> {

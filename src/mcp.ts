@@ -2,37 +2,9 @@ import * as vscode from 'vscode';
 import * as fs from 'fs';
 import * as path from 'path';
 import { Logger } from './logger.js';
+import { MCPResource, MCPContent, MCPTool } from './types.js';
 
-export interface MCPResource {
-  uri: string;
-  name: string;
-  description?: string;
-  mimeType?: string;
-}
 
-export interface MCPTool {
-  name: string;
-  description: string;
-  inputSchema: {
-    type: 'object';
-    properties: Record<string, {
-      type: string;
-      description?: string;
-    }>;
-    required?: string[];
-  };
-  handler: (args: any) => Promise<any>;
-}
-
-export interface MCPMessage {
-  role: 'user' | 'assistant' | 'system';
-  content: MCPContent[];
-}
-
-export type MCPContent = 
-  | { type: 'text'; text: string }
-  | { type: 'resource'; resource: { uri: string; text: string; mimeType?: string } }
-  | { type: 'image'; data: string; mimeType: string };
 
 export class MCPFileSystem {
   private workspaceRoot: string;

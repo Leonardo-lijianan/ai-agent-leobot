@@ -2,8 +2,9 @@
   "name": "ai-agent-leobot",
   "displayName": "AI Agent LeoBot",
   "description": "本地 AI Agent 运行时，支持多模型编排和自定义 Skills",
-  "version": "0.0.1",
+  "version": "0.0.3",
   "publisher": "leo",
+  "license": "AGPL-3.0",
   "type": "module",
   "repository": {
     "type": "git",
@@ -122,13 +123,19 @@
     }
   },
   "scripts": {
-    "vscode:prepublish": "npm run compile",
-    "compile": "tsc -p ./",
-    "watch": "tsc -watch -p ./",
+    "vscode:prepublish": "npm run compile:backend && npm run compile:frontend",
+    "compile": "npm run compile:backend && npm run compile:frontend",
+    "compile:backend": "tsc -p ./",
+    "compile:frontend": "tsc -p tsconfig.frontend.json",
+    "compile:all": "npm run compile:backend && npm run compile:frontend",
+    "watch": "npm run compile:backend && tsc -watch -p tsconfig.frontend.json",
     "pretest": "npm run compile && npm run lint",
     "lint": "eslint src",
     "test": "vscode-test",
     "package": "vsce package"
+  },
+  "vsce": {
+    "dependencies": true
   },
   "dependencies": {
     "@google/genai": "^1.49.0",

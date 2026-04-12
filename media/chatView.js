@@ -261,8 +261,9 @@ document.addEventListener('DOMContentLoaded', () => {
       case 'modelLoaded':
         // 显示当前加载的模型信息
         if (message.model) {
-          const modelName = message.model.modelName || message.model.name;
-          const provider = message.model.provider || '';
+          // 使用 ModelConfig 标准字段名
+          const modelName = message.model.modelId || message.model.id;
+          const provider = message.model.protocolType || '';
           const agentMode = message.model.agentMode;
           const agentName = message.model.agentName || '默认助手';
           

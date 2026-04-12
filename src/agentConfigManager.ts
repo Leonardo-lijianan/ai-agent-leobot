@@ -3,21 +3,32 @@ import * as fs from 'fs';
 import * as path from 'path';
 import { Logger } from './logger.js';
 import { ModelConfigManager } from './modelConfigManager.js';
+import { AgentConfig, AgentConfigFile } from './types.js';
 
 const CONFIG_FILE_NAME = 'agentConfig.json';
 
-export interface AgentConfig {
-  id: string;
-  name: string;
-  description: string;
-  systemPrompt: string;
-  tools: string[];
-  modelId?: string; // 关联的模型
-}
-
-export interface AgentConfigFile {
-  agents: AgentConfig[];
-  defaultAgent: string;
+/**
+ * 获取默认系统提示词
+ * 从 media/system_prompt.md 读取，避免循环依赖
+ */
+function getDefaultSystemPrompt(): string {
+  // 扩展路径
+  const extensionPath = vscode.extensions.getExtension('leo.ai-agent-leobot')?.extensionPath || __dirname;
+  const promptPath = path.join(extensionPath, 'media', 'system_prompt.md');
+  
+  if (!fs.existsSync(promptPath)) {
+    throw new Error(
+      `系统提示词文件不存在：${promptPath}\n` +
+      `可能原因：\n` +
+      `1. 插件安装不完整\n` +
+      `2. media/system_prompt.md 文件丢失\n\n` +
+      `建议：\n` +
+      `- 重新安装插件\n` +
+      `- 或联系开发者获取完整版本`
+    );
+  }
+  
+  return fs.readFileSync(promptPath, 'utf-8');
 }
 
 export class AgentConfigManager {
@@ -53,15 +64,18 @@ export class AgentConfigManager {
     }
     
     if (!fs.existsSync(this.configPath)) {
+      // 使用默认系统提示词（从 media/system_prompt.md 读取）
+      const defaultSystemPrompt = getDefaultSystemPrompt();
+      
       const defaultConfig: AgentConfigFile = {
         agents: [
           {
             id: 'default',
             name: '默认助手',
             description: '默认的 AI 助手',
-            systemPrompt: '你是一个有用的 AI 助手。',
+            systemPrompt: defaultSystemPrompt,
             tools: [],
-            modelId: 'default' // 动态关联到 modelConfig.json 的 defaultModel
+            modelConfigId: 'default' // 动态关联到 modelConfig.json 的 defaultModel
           }
         ],
         defaultAgent: 'default'
@@ -103,7 +117,7 @@ export class AgentConfigManager {
     const defaultModel = modelConfigManager.getDefaultModel();
     
     return agents.map(agent => {
-      if (agent.modelId === 'default') {
+      if (agent.modelConfigId === 'default') {
         return { ...agent, modelId: defaultModel };
       }
       return agent;
@@ -121,10 +135,10 @@ export class AgentConfigManager {
     const agent = config.agents.find(a => a.id === id);
     
     // 如果 modelId 是 'default'，则使用 modelConfig.json 的 defaultModel
-    if (agent && agent.modelId === 'default') {
+    if (agent && agent.modelConfigId === 'default') {
       const modelConfigManager = ModelConfigManager.getInstance();
       const defaultModel = modelConfigManager.getDefaultModel();
-      return { ...agent, modelId: defaultModel };
+      return { ...agent, modelConfigId: defaultModel };
     }
     
     return agent;
@@ -179,7 +193,7 @@ export class AgentConfigManager {
       Logger.errorAndThrow(`Agent ID "${agentId}" 不存在`);
     }
     
-    config.agents[index].modelId = modelId;
+    config.agents[index].modelConfigId = modelId;
     this.writeConfig(config);
   }
 }

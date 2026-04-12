@@ -3,29 +3,26 @@ import { GoogleGenAI } from '@google/genai';
 import { ModelConfig, Message } from './types.js';
 import { ToolRegistry } from './toolRegistry.js';
 import { Logger } from './logger.js';
+import { ModelAdapter } from './types.js'
 
-export interface ModelAdapter {
-  name: string;
-  type: 'openai' | 'anthropic' | 'ollama' | 'gemini' | 'custom';
-  chat(messages: Message[], model?: string, tools?: boolean): Promise<string>;
-  stream?(messages: Message[], model?: string): AsyncIterable<string>;
-}
+
 
 export class OpenAIAdapter implements ModelAdapter {
-  name: string;
-  type: 'openai' | 'anthropic' | 'ollama' | 'custom' = 'openai';
+  modelId: string;
+  protocolType: 'openai' | 'anthropic' | 'ollama' | 'custom' = 'openai';
   private client: OpenAI;
   private defaultModel: string;
   private toolRegistry: ToolRegistry;
 
   constructor(config: ModelConfig) {
-    this.name = config.name;
-    this.defaultModel = config.model || 'deepseek-ai/DeepSeek-V3';
+    this.modelId = config.id;
+    // 使用 modelId（真正的模型名称）而不是 id（配置的别名）
+    this.defaultModel = config.modelId || config.id || 'Qwen/Qwen3.5-122B-A10B';
     this.toolRegistry = ToolRegistry.getInstance();
     
     Logger.debug('OpenAI 适配器初始化', {
-      name: config.name,
-      type: config.type,
+      modelId: config.id,
+      protocolType: config.protocolType,
       endpoint: config.endpoint,
       hasApiKey: !!config.apiKey,
       apiKeyLength: config.apiKey?.length || 0,
@@ -78,20 +75,30 @@ export class OpenAIAdapter implements ModelAdapter {
           Logger.debug('工具列表', { tools: tools.map(t => t.function.name).join(', ') });
         }
 
-        const response = await this.client.chat.completions.create({
+        // 准备请求参数
+        const requestBody: any = {
           model: model || this.defaultModel,
           messages: formattedMessages,
           temperature: 0.7,
-          max_tokens: 2048,
-          tools: tools
-        });
+          max_tokens: 2048
+        };
+        
+        if (tools) {
+          requestBody.tools = tools;
+        }
 
         Logger.debug('API 请求参数', {
           model: model || this.defaultModel,
           hasTools: !!tools,
           toolsCount: tools?.length || 0,
-          messagesCount: formattedMessages.length
+          messagesCount: formattedMessages.length,
+          requestBodySize: JSON.stringify(requestBody).length
         });
+
+        // 打印完整的请求体 JSON（用于调试 400 错误）
+        Logger.debug('=== 完整的请求体 JSON ===\n' + JSON.stringify(requestBody, null, 2));
+
+        const response = await this.client.chat.completions.create(requestBody);
 
         Logger.debug('API 响应', {
           hasToolCalls: !!response.choices[0]?.message?.tool_calls,
@@ -195,7 +202,27 @@ export class OpenAIAdapter implements ModelAdapter {
       Logger.warn('达到最大迭代次数，返回当前结果');
       return '已达到最大工具调用次数限制，请继续提问或重新描述需求';
     } catch (error: any) {
-      Logger.errorAndThrow(`模型调用失败：${error.message}`);
+      Logger.error('模型调用失败', {
+        message: error.message,
+        status: error.status,
+        statusCode: error.statusCode,
+        response: error.response,
+        error: error.error,
+        stack: error.stack
+      });
+      
+      // 尝试提取更详细的错误信息
+      let errorMessage = error.message || '未知错误';
+      
+      if (error.response) {
+        errorMessage = `API 响应错误：${JSON.stringify(error.response)}`;
+      } else if (error.status) {
+        errorMessage = `HTTP ${error.status}: ${errorMessage}`;
+      } else if (error.statusCode) {
+        errorMessage = `HTTP ${error.statusCode}: ${errorMessage}`;
+      }
+      
+      Logger.errorAndThrow(`模型调用失败：${errorMessage}`);
     }
   }
 
@@ -227,18 +254,18 @@ export class OpenAIAdapter implements ModelAdapter {
 }
 
 export class GeminiAdapter implements ModelAdapter {
-  name: string;
-  type: 'gemini' = 'gemini';
+  modelId: string;
+  protocolType: 'gemini' = 'gemini';
   private genAI: GoogleGenAI;
   private defaultModel: string;
 
   constructor(config: ModelConfig) {
-    this.name = config.name;
-    this.defaultModel = config.model || 'gemini-1.5-pro';
+    this.modelId = config.id;
+    this.defaultModel = config.id || 'gemini-1.5-pro';
     
     Logger.debug('Gemini 适配器初始化', {
-      name: config.name,
-      type: config.type,
+      modelId: config.id,
+      protocolType: config.protocolType,
       hasApiKey: !!config.apiKey,
       apiKeyLength: config.apiKey?.length || 0,
       model: this.defaultModel
@@ -302,7 +329,7 @@ export class GeminiAdapter implements ModelAdapter {
 }
 
 export function createModelAdapter(config: ModelConfig): ModelAdapter {
-  switch (config.type) {
+  switch (config.protocolType) {
     case 'openai':
     case 'custom':
       return new OpenAIAdapter(config);

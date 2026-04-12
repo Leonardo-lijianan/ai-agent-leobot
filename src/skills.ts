@@ -2,27 +2,23 @@ import * as vscode from 'vscode';
 import * as fs from 'fs';
 import * as path from 'path';
 import { Logger } from './logger.js';
-
-export interface Skill {
-  name: string;
-  description: string;
-  inputSchema: {
-    type: 'object';
-    properties: Record<string, any>;
-    required?: string[];
-  };
-  execute(input: any): Promise<any>;
-}
+import { Skill } from './types.js';
 
 export class FileReadSkill implements Skill {
   name = 'file-read';
   description = '读取文件内容';
-  inputSchema = {
+  inputSchema: {
+    type: 'object';
+    properties: {
+      filePath: { type: 'string'; description: '要读取的文件路径' }
+    };
+    required: string[];
+  } = {
     type: 'object' as const,
     properties: {
       filePath: { type: 'string', description: '要读取的文件路径' }
     },
-    required: ['filePath'] as string[]
+    required: ['filePath']
   };
 
   async execute(input: { filePath: string }): Promise<string> {
@@ -44,13 +40,20 @@ export class FileReadSkill implements Skill {
 export class FileWriteSkill implements Skill {
   name = 'file-write';
   description = '写入文件内容';
-  inputSchema = {
+  inputSchema: {
+    type: 'object';
+    properties: {
+      filePath: { type: 'string'; description: '要写入的文件路径' };
+      content: { type: 'string'; description: '要写入的内容' };
+    };
+    required: string[];
+  } = {
     type: 'object' as const,
     properties: {
       filePath: { type: 'string', description: '要写入的文件路径' },
       content: { type: 'string', description: '要写入的内容' }
     },
-    required: ['filePath', 'content'] as string[]
+    required: ['filePath', 'content']
   };
 
   async execute(input: { filePath: string; content: string }): Promise<void> {
@@ -72,10 +75,14 @@ export class FileWriteSkill implements Skill {
 export class GetActiveFileSkill implements Skill {
   name = 'get-active-file';
   description = '获取当前活动编辑器的文件信息';
-  inputSchema = {
+  inputSchema: {
+    type: 'object';
+    properties: {};
+    required: string[];
+  } = {
     type: 'object' as const,
     properties: {},
-    required: [] as string[]
+    required: []
   };
 
   async execute(): Promise<{ filePath: string; content: string; language: string; selectedText: string } | null> {

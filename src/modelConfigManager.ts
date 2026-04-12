@@ -5,22 +5,9 @@ import { ModelConfig } from './types.js';
 import { Logger } from './logger.js';
 import { agentManager } from './agentManager.js';
 import { encrypt, decrypt } from './crypto.js';
+import { AgentModelConfig, ModelConfigFile } from './types.js'
 
 const CONFIG_FILE_NAME = 'modelConfig.json';
-
-export interface AgentModelConfig {
-  id: string;
-  name: string;
-  modelId: string; // 关联的模型 ID
-}
-
-export interface ModelConfigFile {
-  models: ModelConfig[];
-  defaultModel: string;
-  currentAgent: string;
-  agentModels: AgentModelConfig[]; // Agent 和模型的关联
-  agentModeEnabled?: boolean; // 是否启用 Agent 模式
-}
 
 export class ModelConfigManager {
   private static instance: ModelConfigManager;
@@ -59,11 +46,11 @@ export class ModelConfigManager {
       const defaultConfig: ModelConfigFile = {
         models: [
           {
-            name: '硅基流动',
-            type: 'openai',
+            id: '硅基流动',
+            protocolType: 'openai',
             endpoint: 'https://api.siliconflow.cn/v1',
             apiKey: '',
-            modelName: 'deepseek-ai/DeepSeek-V3'
+            modelId: 'Qwen/Qwen3.5-122B-A10B'
           }
         ],
         defaultModel: '硅基流动',
@@ -122,30 +109,42 @@ export class ModelConfigManager {
 
   async getApiKey(modelName: string): Promise<string | undefined> {
     const models = this.getModels();
-    const model = models.find(m => m.name === modelName);
+    const model = models.find(m => m.id === modelName);
     
-    if (model?.apiKey && this._context) {
-      // 尝试解密
-      return decrypt(model.apiKey, this._context);
+    if (model?.apiKey) {
+      if (!this._context) {
+        Logger.error('Context 未初始化，无法解密 API Key');
+        return model.apiKey; // 返回加密文本（兼容模式）
+      }
+      try {
+        return await decrypt(model.apiKey, this._context);
+      } catch (error: any) {
+        Logger.error('解密 API Key 失败', error);
+        return model.apiKey; // 解密失败则返回原文（兼容旧数据）
+      }
     }
-    
     return undefined;
   }
 
   async updateApiKey(modelName: string, apiKey: string): Promise<void> {
     const models = this.getModels();
-    const modelIndex = models.findIndex(m => m.name === modelName);
+    const modelIndex = models.findIndex(m => m.id === modelName);
     
-    if (modelIndex !== -1 && this._context) {
-      // 加密后存储
-      models[modelIndex].apiKey = await encrypt(apiKey, this._context);
+    if (modelIndex !== -1) {
+      if (!this._context) {
+        Logger.error('Context 未初始化，无法加密 API Key');
+        models[modelIndex].apiKey = apiKey; // 直接保存明文（兼容模式）
+      } else {
+        const encryptedKey = await encrypt(apiKey, this._context);
+        models[modelIndex].apiKey = encryptedKey;
+      }
       await this.updateModels(models);
     }
   }
 
   getModelByName(name: string): ModelConfig | undefined {
     const models = this.getModels();
-    return models.find(m => m.name === name);
+    return models.find(m => m.id === name);
   }
 
   async getCurrentAgent(): Promise<string> {

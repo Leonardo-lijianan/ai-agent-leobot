@@ -1,17 +1,7 @@
 import { Logger } from './logger.js';
 import { AgentConfigManager } from './agentConfigManager.js';
+import { AgentConfig } from './types.js'
 
-/**
- * Agent 配置接口
- */
-export interface AgentConfig {
-  id: string;
-  name: string;
-  description: string;
-  systemPrompt: string;
-  tools: string[];
-  modelId?: string; // 关联的模型
-}
 
 /**
  * Agent 管理器
@@ -109,7 +99,7 @@ export class AgentManager {
   /**
    * 获取默认系统提示词
    */
-  private getDefaultSystemPrompt(): string {
+  public getDefaultSystemPrompt(): string {
     return `你是 AI 助手，可访问本地文件系统帮助用户完成任务。
 
 ## 基础工具（MCP）

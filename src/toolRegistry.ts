@@ -1,21 +1,5 @@
-import { MCPTool } from './mcp.js';
-import { Skill } from './skills.js';
+import { Skill, Tool, MCPTool } from './types.js';
 import { Logger } from './logger.js';
-
-/**
- * 统一工具接口
- */
-export interface Tool {
-  name: string;
-  description: string;
-  inputSchema: {
-    type: 'object';
-    properties: Record<string, any>;
-    required?: string[];
-  };
-  execute(args: any): Promise<any>;
-  source: 'mcp' | 'skill';
-}
 
 /**
  * 工具注册表
