@@ -1,4 +1,4 @@
-# AI Agent LeoBot 项目实际情况分析
+# AI Agent LeoBot 项目分析
 
 ## 项目概述
 
@@ -283,7 +283,7 @@ flowchart TD
     TestResult --> ShowModal
 ```
 
-## 4. Agent 管理系统图（实际情况 - 2026-04-12 更新）
+## 5. Agent 管理系统图（实际情况 - 2026-04-12 更新）
 
 ```mermaid
 classDiagram
@@ -367,7 +367,7 @@ classDiagram
 - ⚠️ 没有事件机制 - 配置变化时无法自动同步
 - ⚠️ `registerDefaultAgents()` 方法冗余 - 应该直接调用 `AgentConfigManager`
 
-## 5. 模型适配器模式图（实际情况 - 2026-04-12 更新）
+## 6. 模型适配器模式图（实际情况 - 2026-04-12 更新）
 
 ```mermaid
 classDiagram
@@ -457,7 +457,7 @@ function createModelAdapter(config: ModelConfig): ModelAdapter {
 - ⚠️ GeminiAdapter 不支持工具调用 - 应该实现
 - ⚠️ 没有 Anthropic、Ollama 适配器 - 待实现
 
-## 6. MCP 协议工具调用图（实际情况 - 2026-04-12 更新）
+## 7. MCP 协议工具调用图（实际情况 - 2026-04-12 更新）
 
 ```mermaid
 flowchart LR
@@ -531,7 +531,7 @@ for (const toolCall of toolCalls) {
 - ⚠️ 不支持自定义工具 - 应该允许用户注册自定义 Skill
 - ⚠️ 工具数量固定 - 应该支持动态扩展
 
-## 7. 日志系统架构图（实际情况 - 2026-04-12 更新）
+## 8. 日志系统架构图（实际情况 - 2026-04-12 更新）
 
 ```mermaid
 graph TB
@@ -588,24 +588,49 @@ Logger.api('调用模型 API', { model: 'Qwen/Qwen3.5-122B-A10B' });
 - ✅ **分类清晰** - 不同模块使用不同的日志分类
 - ✅ **结构化** - 支持传递对象参数
 
-## 8. 项目文件结构图（实际情况 - 2026-04-12 更新）
+## 9. 项目文件结构图（实际情况 - 2026-04-12 更新）
 
 ```mermaid
 graph TD
     Root[ai-agent-leobot]
     
     subgraph "源代码 (src/)"
+        SrcRoot["src/"]
+        
+        subgraph ManagersDir["managers/"]
+            ModelConfigManager[ModelConfigManager.ts<br/>模型配置管理]
+            AgentConfigManager[AgentConfigManager.ts<br/>Agent 配置管理]
+            AgentManager[AgentManager.ts<br/>Agent 运行时管理]
+            ChatHistoryManager[ChatHistoryManager.ts<br/>聊天历史管理]
+        end
+        
+        subgraph FeaturesDir["features/"]
+            ChatView[ChatView.ts<br/>聊天视图]
+            ConfigPanel[ConfigPanel.ts<br/>配置面板]
+            ConfigPanelView[configPanelView.ts<br/>配置面板前端]
+        end
+        
+        subgraph AdaptersDir["adapters/"]
+            ModelAdapter[modelAdapter.ts<br/>模型适配]
+        end
+        
+        subgraph ToolsDir["tools/"]
+            MCP[mcp.ts<br/>MCP 服务器]
+            ToolRegistry[ToolRegistry.ts<br/>工具注册]
+            Skills[skills.ts<br/>技能定义<br/>未使用]
+        end
+        
+        subgraph UtilsDir["utils/"]
+            Logger[Logger.ts<br/>日志系统]
+            Crypto[crypto.ts<br/>加密工具]
+        end
+        
+        subgraph TestDir["test/"]
+            ExtensionTest[extension.test.ts<br/>测试文件]
+        end
+        
         Extension[extension.ts<br/>入口文件]
-        ChatView[chatView.ts<br/>聊天视图]
-        ConfigPanel[configPanel.ts<br/>配置面板]
-        ConfigPanelView[configPanelView.ts<br/>配置面板前端]
-        ModelConfigManager[ModelConfigManager.ts<br/>模型配置管理]
-        AgentConfigManager[AgentConfigManager.ts<br/>Agent 配置管理]
-        AgentManager[AgentManager.ts<br/>Agent 运行时管理]
-        Skills[skills.ts<br/>技能定义<br/>未使用]
-        MCP[mcp.ts<br/>MCP 服务器]
-        ModelAdapter[modelAdapter.ts<br/>模型适配]
-        Logger[logger.ts<br/>日志系统]
+        ConfigManager["configManager.ts<br/>配置管理<br/>旧"]
         Types[types.ts<br/>类型定义]
     end
     
@@ -629,7 +654,7 @@ graph TD
         Readme[README.md]
         Changelog[CHANGELOG.md]
         Analysis[分析.md]
-        现实情况 [现实情况.md<br/>本文档]
+        RealityDoc["现实情况.md<br/>本文档"]
     end
     
     subgraph "输出目录 (out/)"
@@ -641,31 +666,58 @@ graph TD
         DistCJS[dist/extension.cjs<br/>打包后的扩展]
     end
     
-    Root --> Src
-    Root --> Media
-    Root --> ConfigFiles
-    Root --> Docs
-    Root --> Out
-    Root --> Dist
+    Root --> SrcRoot
+    SrcRoot --> ManagersDir
+    SrcRoot --> FeaturesDir
+    SrcRoot --> AdaptersDir
+    SrcRoot --> ToolsDir
+    SrcRoot --> UtilsDir
+    SrcRoot --> TestDir
+    SrcRoot --> Extension
+    SrcRoot --> ConfigManager
+    SrcRoot --> Types
     
-    Src --> Extension
-    Src --> ChatView
-    Src --> ConfigPanel
-    Src --> ConfigPanelView
-    Src --> ModelConfigManager
-    Src --> AgentConfigManager
-    Src --> AgentManager
-    Src --> Skills
-    Src --> MCP
-    Src --> ModelAdapter
-    Src --> Logger
-    Src --> Types
+    ManagersDir --> ModelConfigManager
+    ManagersDir --> AgentConfigManager
+    ManagersDir --> AgentManager
+    ManagersDir --> ChatHistoryManager
     
-    Media --> ConfigPanelHTML
-    Media --> ChatViewHTML
-    Media --> SystemPrompt
-    Media --> ChatViewCSS
-    Media --> TestMarkdown
+    FeaturesDir --> ChatView
+    FeaturesDir --> ConfigPanel
+    FeaturesDir --> ConfigPanelView
+    
+    AdaptersDir --> ModelAdapter
+    
+    ToolsDir --> MCP
+    ToolsDir --> ToolRegistry
+    ToolsDir --> Skills
+    
+    UtilsDir --> Logger
+    UtilsDir --> Crypto
+    
+    TestDir --> ExtensionTest
+    
+    Root --> ConfigPanelHTML
+    Root --> ChatViewHTML
+    Root --> SystemPrompt
+    Root --> ChatViewCSS
+    Root --> TestMarkdown
+    
+    Root --> PackageJson
+    Root --> TsConfig
+    Root --> TsConfigFrontend
+    Root --> VsCodeIgnore
+    Root --> ESBuild
+    
+    Root --> Readme
+    Root --> Changelog
+    Root --> Analysis
+    Root --> RealityDoc
+    
+    Root --> OutJS
+    Root --> OutMap
+    
+    Root --> DistCJS
 ```
 
 **关键文件说明**：
@@ -695,78 +747,147 @@ graph TD
 - ⚠️ `skills.ts` 未使用 - 应该集成或删除
 - ⚠️ 文件命名不统一 - 有些用驼峰，有些用下划线
 
-## 9. 关键差异总结
+## 10. 命令注册图（计划中 - 2026-04-12）
 
-### ✅ 架构改进（2026-04-12）
+```mermaid
+graph LR
+    Extension[extension.ts<br/>激活扩展]
+    
+    subgraph "命令注册"
+        ChatCmd[ai-agent-leobot.chat<br/>打开聊天]
+        ConfigureCmd[ai-agent-leobot.configure<br/>配置模型]
+        ExplainCmd[ai-agent-leobot.explain<br/>解释代码]
+        OptimizeCmd[ai-agent-leobot.optimize<br/>优化代码]
+        ClearChatCmd[ai-agent-leobot.clearChat<br/>清除聊天]
+    end
+    
+    subgraph "视图容器"
+        ActivityBar[活动栏图标]
+        SidePanel[侧边栏面板]
+        ChatView[AI Chat Webview]
+    end
+    
+    Extension --> ChatCmd
+    Extension --> ConfigureCmd
+    Extension --> ExplainCmd
+    Extension --> OptimizeCmd
+    Extension --> ClearChatCmd
+    
+    ChatCmd --> SidePanel
+    ConfigureCmd --> ConfigPanel
+    ExplainCmd --> ChatView
+    OptimizeCmd --> ChatView
+```
 
-1. **配置管理分离**
-   - ✅ `ModelConfigManager` - 管理模型配置（modelConfig.json）
-   - ✅ `AgentConfigManager` - 管理 Agent 配置（agentConfig.json）
-   - ✅ 职责清晰，符合单一职责原则
+## 11. 配置面板 UI 结构图（实际情况 - 2026-04-12）
 
-2. **单一数据源**
-   - ✅ 系统提示词只存储在 `media/system_prompt.md`
-   - ✅ `AgentConfigManager.getDefaultSystemPrompt()` 是唯一读取方法
-   - ✅ `agentConfig.json` 中的提示词来自 `media/system_prompt.md`
+```mermaid
+flowchart TD
+    A[配置面板] --> MainUI
+    
+    subgraph MainUI[主界面]
+        direction TB
+        A1[标题]
+        A2[Agent 选择器]
+        A3[编辑模型配置按钮]
+        A4[新增 Agent 按钮]
+    end
+    
+    MainUI --> A3 --> EditModal
+    MainUI --> A4 --> AddAgentModal
+    
+    subgraph EditModal[编辑模型模态框]
+        direction LR
+        B1[标题]
+        B2[模型提供商选择]
+        B3[API 端点输入]
+        B4[API Key 输入]
+        B5[模型名称输入]
+        B6[测试连接按钮]
+        B7[保存配置按钮]
+        B8[查看可用模型按钮]
+        B9[关闭按钮]
+        B10[状态提示区]
+    end
+    
+    subgraph AddAgentModal[新增 Agent 模态框]
+        direction LR
+        C1[标题]
+        C2[Agent ID]
+        C3[Agent 名称]
+        C4[描述]
+        C5[系统提示词]
+        C6[工具选择]
+        C7[确定按钮]
+        C8[取消按钮]
+        C9[状态提示区]
+    end
+```
 
-3. **职责分离**
-   - ✅ `AgentConfigManager` - 配置层，负责文件 I/O
-   - ✅ `AgentManager` - 业务层，负责运行时逻辑
-   - ✅ 配置层不依赖业务层
+## 12. 消息传递协议图（实际情况 - 2026-04-12）
 
-4. **ESBuild 打包**
-   - ✅ 后端代码打包到 `dist/extension.cjs`
-   - ✅ 前端代码打包到 `media/configPanelView.js`
-   - ✅ 代码混淆压缩，减小包体积
+```mermaid
+sequenceDiagram
+    participant ConfigPanel as 配置面板 Webview
+    participant Extension as Extension.ts
+    
+    ConfigPanel->>Extension: loadConfig (请求配置)
+    Extension-->>ConfigPanel: loadConfig (返回配置数据)
+    Extension-->>ConfigPanel: agentList (返回 Agent 列表)
+    
+    ConfigPanel->>Extension: test (测试连接)
+    Extension-->>ConfigPanel: testResult (测试结果)
+    
+    ConfigPanel->>Extension: saveModelConfig (保存配置)
+    Extension-->>ConfigPanel: saveResult (保存结果)
+    
+    ConfigPanel->>Extension: listModels (查看模型)
+    Extension-->>ConfigPanel: listModelsResult (模型列表)
+    
+    ConfigPanel->>Extension: addAgent (新增 Agent)
+    Extension-->>ConfigPanel: addAgentResult (添加结果)
+```
 
-### ❌ 待改进方向
+## 13. 技术栈分析（实际情况 - 2026-04-12）
 
-#### 🔴 高优先级（计划中）
+```mermaid
+mindmap
+  root((AI Agent LeoBot))
+    开发语言
+      TypeScript
+      ESM 模块
+    运行环境
+      VS Code Extension
+      Node.js
+    UI 框架
+      VS Code Webview
+      原生 HTML/CSS/JS
+    AI 模型
+      Google Gemini
+      OpenAI GPT
+      硅基流动
+    协议标准
+      MCP (Model Context Protocol)
+    核心功能
+      Agent 管理
+      技能系统
+      配置管理
+      统一日志
+```
 
-1. **事件驱动架构**
-   - ⚠️ 配置变化时没有自动通知机制
-   - 💡 建议：添加观察者模式，使用 `vscode.EventEmitter`
+## 14. 项目规模统计（计划中 - 2026-04-12）
 
-2. **按需加载**
-   - ⚠️ `AgentManager` 缓存所有 Agent，内存浪费
-   - 💡 建议：按需读取，只缓存当前 Agent
+```mermaid
+pie
+    title 代码文件分布
+    "核心逻辑" : 45
+    "UI 界面" : 25
+    "配置管理" : 15
+    "工具函数" : 10
+    "类型定义" : 5
+```
 
-3. **移除冗余代码**
-   - ✅ `ModelConfigManager.getAllAgents()` 已移除（2026-04-12）
-   - ✅ 已移除对 `agentManager` 的导入
-
-4. **整合 Skill 系统**
-   - ⚠️ `skills.ts` 存在但未使用
-   - 💡 建议：集成到 MCP 工具调用链，或删除
-
-#### 🟡 中优先级（计划中）
-
-5. **支持自定义工具**
-   - ⚠️ MCP 工具固定，不支持扩展
-   - 💡 建议：添加用户注册自定义 Skill 的功能
-
-6. **完善适配器**
-   - ⚠️ GeminiAdapter 不支持工具调用
-   - ⚠️ 缺少 Anthropic、Ollama 适配器
-   - 💡 建议：实现完整的工具调用支持
-
-7. **创建 ModelManager** ⭐ 新增
-   - ⚠️ 当前 `chatView.ts` 直接调用 `createModelAdapter()`
-   - ⚠️ 没有统一的模型生命周期管理
-   - ⚠️ 没有模型切换通知机制
-   - 💡 建议：创建 `ModelManager` 统一管理模型运行时
-   - 💡 职责：
-     - 管理 ModelAdapter 的创建和缓存
-     - 提供统一的模型访问接口
-     - 处理模型切换
-     - 提供模型变化通知（事件驱动）
-   - 💡 依赖关系：
-     - `ModelManager` → `ModelConfigManager`（获取配置）
-     - `ModelManager` → `createModelAdapter()`（创建适配器）
-
----
-
-## 10. 系统特性评分（2026-04-12）
+## 15. 系统特性评分（实际情况 - 2026-04-12）
 
 ```mermaid
 xychart-beta
@@ -793,45 +914,27 @@ xychart-beta
 
 ---
 
-## 11. 总结
+## 总结
 
-### ✅ 当前架构优势
+### 架构优势
+1. **配置管理清晰** - 模型配置和 Agent 配置分离，配置层和业务层职责明确
+2. **单一数据源** - 系统提示词只存储在 `media/system_prompt.md`，避免数据不一致
+3. **ESBuild 优化** - 代码混淆压缩，包体积从 8.2 MB 降至 351 KB
+4. **MCP 工具集成** - 内置文件操作工具，超时、重试机制完善
+5. **模块化设计** - 各模块职责清晰，依赖关系明确
+6. **适配器模式** - 支持多种 AI 模型，易于扩展
 
-1. **配置管理清晰**
-   - 模型配置和 Agent 配置分离
-   - 配置层和业务层职责明确
+### 技术亮点
+1. **ESM 模块系统** - 现代化的 JavaScript 模块标准
+2. **TypeScript 类型安全** - 完整的类型定义
+3. **Webview UI** - 原生 HTML/CSS 实现，无额外依赖
+4. **配置管理** - 安全的密钥存储和配置持久化
+5. **模态框设计** - 用户友好的配置界面
 
-2. **单一数据源**
-   - 系统提示词只有一份（media/system_prompt.md）
-   - 避免数据不一致问题
-
-3. **ESBuild 优化**
-   - 代码混淆压缩
-   - 包体积从 8.2 MB 降至 351 KB
-
-4. **MCP 工具集成**
-   - 内置文件操作工具
-   - 超时、重试机制完善
-
-### ❌ 主要问题
-
-1. **缺少事件驱动**
-   - 配置变化时无法自动同步
-   - 需要手动刷新或重启
-
-2. **内存浪费**
-   - AgentManager 缓存所有 Agent
-   - 实际只使用当前一个
-
-3. **代码冗余**
-   - `registerDefaultAgents()` 方法冗余
-   - `ModelConfigManager.getAllAgents()` 职责不清
-
-### 💡 改进方向
-
+### 待优化方向
 1. **添加事件机制** - 观察者模式，配置变化自动通知
 2. **按需加载** - 只缓存当前 Agent，减少内存占用
 3. **移除冗余代码** - 清理未使用的方法和变量
 4. **整合 Skill 系统** - 支持用户自定义工具
 5. **完善适配器** - 实现 Gemini 工具调用，添加 Anthropic、Ollama 支持
-
+6. **增加单元测试** - 提高代码质量和可维护性
