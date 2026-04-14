@@ -90,13 +90,15 @@ export class ConfigManager {
   }
 
   async getCurrentAgent(): Promise<string> {
-    const config = vscode.workspace.getConfiguration(CONFIG_KEY);
-    return config.get<string>('currentAgent', 'default');
+    // ✅ 从 GlobalConfigManager 获取运行时配置
+    const { GlobalConfigManager } = await import('./managers/GlobalConfigManager.js');
+    return GlobalConfigManager.getInstance().getCurrentAgent();
   }
 
   async setCurrentAgent(agentId: string): Promise<void> {
-    const config = vscode.workspace.getConfiguration(CONFIG_KEY);
-    await config.update('currentAgent', agentId, vscode.ConfigurationTarget.Global);
+    // ✅ 从 GlobalConfigManager 获取运行时配置
+    const { GlobalConfigManager } = await import('./managers/GlobalConfigManager.js');
+    await GlobalConfigManager.getInstance().setCurrentAgent(agentId);
   }
 
   getAllAgents() {

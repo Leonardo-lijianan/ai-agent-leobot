@@ -13,15 +13,15 @@
 | 问题 | 严重程度 | 优先级 | 状态 |
 |------|---------|--------|------|
 | ~~循环依赖风险~~ | 🔴 严重 | 高 | ✅ 已修复（删除 ModelConfigManager.getAllAgents） |
-| 缺少事件驱动机制 | 🔴 严重 | 高 | ⏳ 待修复 |
-| AgentManager 缓存所有 Agent | 🟡 中等 | 中 | ⏳ 待修复 |
+| ~~缺少事件驱动机制~~ | 🔴 严重 | 高 | ✅ 已实现（EventEmitter 机制） |
+| ~~AgentManager 缓存所有 Agent~~ | 🟡 中等 | 中 | ✅ 已优化（限制 MAX_CACHED_AGENTS=10） |
 | ~~registerDefaultAgents() 冗余~~ | 🟡 中等 | 中 | ✅ 已修复（已删除） |
-| 缺少 ModelManager 统一管理 | 🟡 中等 | 中 | ⏳ 待实施 |
+| 缺少 ModelManager 统一管理 | � 严重 | 高 | ⏳ 待实施 |
 | ~~职责不清的方法~~ | 🟡 中等 | 中 | ✅ 已修复（删除 getAllAgents） |
-| skills.ts 未使用 | 🟡 中等 | 中 | ⏳ 待修复（保留待整合） |
+| ~~skills.ts 未使用~~ | 🟡 中等 | 中 | ✅ 已整合（通过 ToolRegistry 整合到 MCP） |
 | ~~AgentConfigManager 职责混淆~~ | 🟡 中等 | 中 | ✅ 已解决（维持现状） |
 | ~~文件命名不统一~~ | 🟢 轻微 | 低 | ✅ 已解决（统一使用驼峰命名） |
-| GeminiAdapter 不支持工具调用 | 🟢 轻微 | 低 | ⏳ 待修复 |
+| GeminiAdapter 不支持工具调用 | � 中等 | 中 | ⏳ 待修复 |
 | 缺少 Anthropic、Ollama 适配器 | 🟢 轻微 | 低 | ⏳ 待修复 |
 
 ---
@@ -42,37 +42,51 @@
    - ~~统一文件命名（驼峰命名）~~
    - ~~统一代码风格~~
 
-### 第二阶段（中优先级 - 待实施）
+4. **~~添加事件驱动机制~~** ✅ 已实现
+   - ~~实现观察者模式~~
+   - ~~使用 `vscode.EventEmitter`~~
+   - ~~配置变化自动通知~~
 
-4. **添加事件驱动机制**
-   - 实现观察者模式
-   - 使用 `vscode.EventEmitter`
-   - 配置变化自动通知
+5. **~~优化 Agent 加载~~** ✅ 已优化
+   - ~~改为按需加载~~
+   - ~~限制缓存数量（MAX_CACHED_AGENTS = 10）~~
 
-5. **优化 Agent 加载**
-   - 改为按需加载
-   - 只缓存当前 Agent
+6. **~~处理 skills.ts~~** ✅ 已整合
+   - ~~整合到 MCP 工具链~~
+   - ~~通过 ToolRegistry 统一管理~~
 
-6. **处理 skills.ts**
-   - 决定整合到 MCP 工具链或删除
+### 第二阶段（高优先级 - 待实施）
 
-### 第三阶段（低优先级 - 待实施）
+7. **创建 ModelManager** 🔴 严重
+   - 统一管理 ModelAdapter 的创建和缓存
+   - 提供统一的模型访问接口
+   - 处理模型切换
+   - 避免 ChatView 直接调用 createModelAdapter()
 
-7. **完善适配器**
-   - 实现 Gemini 工具调用
-   - 添加 Anthropic、Ollama 适配器
+### 第三阶段（中优先级 - 待实施）
+
+8. **实现 Gemini 工具调用**
+   - 参考 OpenAIAdapter 的工具调用实现
+   - 支持 MCP 工具链
+   
+9. **完善适配器**
+   - 添加 Anthropic 适配器
+   - 添加 Ollama 适配器
 
 ---
 
 ## 📝 总结
 
 ### 当前架构优势
-- ✅ 配置管理分离
-- ✅ 单一数据源
-- ✅ 职责基本清晰
+- ✅ 配置管理分离（ModelConfigManager、AgentConfigManager）
+- ✅ 单一数据源（配置文件统一在 VS Code 全局存储目录）
+- ✅ 职责基本清晰（配置层、业务层、适配层）
 - ✅ ESBuild 优化
 - ✅ 文件结构重构完成（managers, features, adapters, tools, utils）
 - ✅ 导入路径全部修复
+- ✅ **事件驱动机制**（EventEmitter 实现配置变化通知）
+- ✅ **Agent 缓存优化**（限制 MAX_CACHED_AGENTS = 10）
+- ✅ **工具链整合**（ToolRegistry 统一管理 MCP 工具和 Skill）
 
 ### 已解决问题 ✅
 - ✅ ~~循环依赖风险~~ - 删除 ModelConfigManager.getAllAgents()
@@ -80,28 +94,29 @@
 - ✅ ~~职责不清的方法~~ - 已修复
 - ✅ ~~文件命名不统一~~ - 统一使用驼峰命名
 - ✅ ~~AgentConfigManager 职责混淆~~ - 维持现状，设计合理
+- ✅ ~~缺少事件驱动机制~~ - 已实现 EventEmitter 机制
+- ✅ ~~AgentManager 缓存所有 Agent~~ - 已优化为限制缓存数量
+- ✅ ~~skills.ts 未使用~~ - 已通过 ToolRegistry 整合到 MCP 工具链
 
 ### 主要问题（待修复）
-- 🔴 缺少事件驱动机制 - 配置变化无法自动通知
-- 🟡 AgentManager 缓存所有 Agent - 内存浪费
-- 🟡 skills.ts 未使用 - 待整合或删除
+- 🔴 缺少 ModelManager 统一管理 - ChatView 直接调用 createModelAdapter()
+- 🟡 Gemini 适配器不支持工具调用 - 功能不完整
+- 🟢 缺少 Anthropic、Ollama 适配器 - 协议支持不完整
 
 ### 改进方向
-1. **添加观察者模式**（高优先级）
-   - 使用 vscode.EventEmitter
-   - 配置变化自动通知相关组件
+1. **创建 ModelManager**（高优先级 - 🔴 严重）
+   - 统一管理 ModelAdapter 的创建和缓存
+   - 提供统一的模型访问接口
+   - 处理模型切换
+   - 避免 ChatView 直接调用 createModelAdapter()
    
-2. **按需加载 Agent**（中优先级）
-   - 只缓存当前 Agent
-   - 从配置文件按需读取
+2. **实现 Gemini 工具调用**（中优先级 - 🟡 中等）
+   - 参考 OpenAIAdapter 的工具调用实现
+   - 支持 MCP 工具链
    
-3. **处理 skills.ts**（中优先级）
-   - 整合到 MCP 工具链
-   - 或者删除
-   
-4. **完善适配器实现**（低优先级）
-   - 实现 Gemini 工具调用
-   - 添加 Anthropic、Ollama 适配器
+3. **完善适配器**（低优先级 - 🟢 轻微）
+   - 添加 Anthropic 适配器
+   - 添加 Ollama 适配器
 
 ---
 
@@ -154,177 +169,110 @@ const agents = agentManager.getAllAgents();
 
 ---
 
-### 2. 缺少事件驱动机制
+### 2. ~~缺少事件驱动机制~~ ✅ 已实现
 
-**问题描述**：配置变化时无法自动通知相关组件
+**状态**：✅ 已实现
 
-**影响范围**：
-- `AgentConfigManager` 修改配置后，`AgentManager` 不知道
-- `ModelConfigManager` 修改配置后，相关组件不知道
-- 用户需要重启或手动刷新才能看到变化
+**实现位置**：
+- `src/managers/ModelConfigManager.ts` Line 14-16
+- `src/managers/AgentConfigManager.ts` Line 14-16
 
-**当前流程**：
-```
-用户修改配置
-  ↓
-ConfigPanel 保存配置
-  ↓
-AgentConfigManager.updateAgents()
-  ↓
-❌ 没有通知机制
-  ↓
-AgentManager 仍使用旧缓存
-  ↓
-ChatView 获取的是旧数据
-```
-
-**危害**：
-- ⚠️ 数据不一致
-- ⚠️ 用户体验差（需要重启）
-- ⚠️ 可能导致错误行为
-
-**解决方案**：使用观察者模式
+**已实现代码**：
 ```typescript
+// modelConfigManager.ts
+export class ModelConfigManager {
+  private _onDidChangeConfig = new vscode.EventEmitter<void>();
+  public readonly onDidChangeConfig = this._onDidChangeConfig.event;
+  
+  async updateModels(models: ModelConfig[]): Promise<void> {
+    const config = this.readConfig();
+    config.models = models;
+    this.writeConfig(config);
+    this._onDidChangeConfig.fire();  // ✅ 通知变化
+  }
+}
+
 // agentConfigManager.ts
-class AgentConfigManager {
-  private _onDidChange = new vscode.EventEmitter<void>();
-  readonly onDidChange = this._onDidChange.event;
+export class AgentConfigManager {
+  private _onDidChangeConfig = new vscode.EventEmitter<void>();
+  public readonly onDidChangeConfig = this._onDidChangeConfig.event;
   
   async updateAgents(agents: AgentConfig[]) {
     await this.writeConfig(config);
-    this._onDidChange.fire();  // ✅ 通知变化
-  }
-}
-
-// agentManager.ts
-class AgentManager {
-  setConfigManager(configManager: AgentConfigManager) {
-    this.configManager = configManager;
-    
-    // ✅ 订阅变化
-    configManager.onDidChange(() => {
-      this.reloadAgents();
-    });
+    this._onDidChangeConfig.fire();  // ✅ 通知变化
   }
 }
 ```
 
-**优先级**：🔴 高
+**监听者**：
+- `AgentManager` 监听 `AgentConfigManager.onDidChangeConfig`
+- `ChatView` 监听 `ModelConfigManager.onDidChangeConfig`
+
+**优先级**：✅ 已完成
 
 ---
 
 ## 🟡 中等问题
 
-### 3. AgentManager 缓存所有 Agent
+### 3. ~~AgentManager 缓存所有 Agent~~ ✅ 已优化
 
-**问题描述**：`AgentManager` 启动时加载所有 Agent 到内存，没有数量限制
+**状态**：✅ 已优化
 
-**位置**：`src/agentManager.ts` Line 42-51
+**实现位置**：`src/managers/AgentManager.ts` Line 14
 
-**数据流图**：
-
-```mermaid
-graph TD
-    A[.vscode/agentConfig.json<br/>Agent 配置文件]:::data
-    B[media/system_prompt.md<br/>系统提示词模板]:::data
-    
-    C[AgentConfigManager.getAgents<br/>读取 Agent 配置]:::config
-    D[AgentConfigManager.getDefaultSystemPrompt<br/>读取默认提示词]:::config
-    
-    E[AgentManager.loadAgentsFromConfig<br/>从配置加载]:::runtime
-    F[AgentManager.agents: Map<br/>内存缓存]:::runtime
-    G[AgentManager.getAllAgents<br/>返回缓存数据]:::runtime
-    
-    H[ChatView<br/>获取 Agent 列表]:::feature
-    
-    A --> C
-    B --> D
-    C --> E
-    E --> F
-    F --> G
-    G --> H
-    
-    classDef data fill:#4a90a4,stroke:#2c5f70,color:#ffffff
-    classDef config fill:#d4a017,stroke:#947600,color:#000000
-    classDef runtime fill:#c0392b,stroke:#7b241c,color:#ffffff
-    classDef feature fill:#27ae60,stroke:#1e8449,color:#ffffff
-```
-
-**当前代码**：
+**已实现代码**：
 ```typescript
-private loadAgentsFromConfig() {
-  // ❌ 加载所有 Agent 到内存
-  const agents = this.agentConfigManager.getAgents();
-  this.agents.clear();
-  
-  for (const agent of agents) {
-    this.agents.set(agent.id, agent);  // 全部缓存
-  }
-  
-  this.currentAgentId = this.agentConfigManager.getDefaultAgent();
-}
-```
-
-**实际问题**：
-- ⚠️ 内存浪费（10 个 Agent 只用 1 个）
-- ⚠️ 数据可能过期（配置文件被修改后）
-- ⚠️ 启动时间增加
-- ⚠️ **内存爆炸风险**（Agent 数量过多时）
-
-**用户建议方案**：限制缓存数量
-```typescript
-class AgentManager {
-  private readonly MAX_CACHED_AGENTS = 10;  // 最多缓存 10 个 Agent
+export class AgentManager {
+  private static instance: AgentManager;
+  private agents: Map<string, AgentConfig> = new Map();
+  private readonly MAX_CACHED_AGENTS = 10; // ✅ 最多缓存 10 个 Agent
+  private currentAgentId: string = 'default';
+  private agentConfigManager?: AgentConfigManager;
   
   private loadAgentsFromConfig() {
-    const agents = this.agentConfigManager.getAgents();
-    this.agents.clear();
-    
-    // ✅ 只缓存前 N 个 Agent
-    const limitedAgents = agents.slice(0, this.MAX_CACHED_AGENTS);
-    for (const agent of limitedAgents) {
-      this.agents.set(agent.id, agent);
-    }
-    
-    Logger.info('从配置文件加载 Agent', { 
-      total: agents.length,
-      cached: limitedAgents.length,
-      limit: this.MAX_CACHED_AGENTS
-    });
-  }
-}
-```
-
-**解决方案**：按需加载
-```typescript
-class AgentManager {
-  private currentAgentId: string = 'default';
-  
-  // ✅ 不缓存所有 Agent，只记录当前 Agent ID
-  getCurrentAgent(): AgentConfig {
     if (!this.agentConfigManager) {
-      Logger.errorAndThrow('AgentConfigManager 未初始化');
+      return;
     }
-    
-    // ✅ 按需从配置文件读取
-    return this.agentConfigManager.getAgentById(this.currentAgentId);
-  }
-  
-  switchAgent(agentId: string): boolean {
-    // ✅ 只更新 ID，不缓存
-    this.currentAgentId = agentId;
-    return true;
+
+    try {
+      const agents = this.agentConfigManager.getAgents();
+      this.agents.clear();
+      
+      // ✅ 只缓存前 N 个 Agent，避免内存浪费
+      const limitedAgents = agents.slice(0, this.MAX_CACHED_AGENTS);
+      for (const agent of limitedAgents) {
+        this.agents.set(agent.id, agent);
+      }
+      
+      this.currentAgentId = this.agentConfigManager.getDefaultAgent();
+      
+      Logger.info('从配置文件加载 Agent', { 
+        total: agents.length,
+        cached: limitedAgents.length,
+        limit: this.MAX_CACHED_AGENTS,
+        currentAgent: this.currentAgentId 
+      });
+    } catch (error) {
+      Logger.error('加载 Agent 配置失败，使用默认配置', error);
+    }
   }
 }
 ```
 
-**优先级**：🟡 中
+**优化效果**：
+- ✅ 限制缓存数量为 10，避免内存浪费
+- ✅ 记录加载日志，便于调试
+- ✅ 保留按需从配置文件读取的能力
+
+**优先级**：✅ 已完成
 
 ---
 
-### 4. 缺少 ModelManager 统一管理
+### 4. 缺少 ModelManager 统一管理 🔴 严重
 
 **问题描述**：模型适配器的创建和管理分散在多个地方，缺少统一的 ModelManager
+
+**位置**：`src/features/ChatView.ts` Line 5-6
 
 **影响范围**：
 - `ChatView` 直接调用 `createModelAdapter()`
@@ -339,9 +287,18 @@ import { createModelAdapter } from '../adapters/modelAdapter.js';
 class ChatViewProvider {
   private _modelAdapter: ModelAdapter | null = null;
   
-  async sendMessage() {
+  private async _initializeModel(sendMessage: boolean = true) {
     // ❌ 直接调用工厂函数
+    const modelConfig = this._configManager.getModelByName(modelConfigId);
     this._modelAdapter = createModelAdapter(modelConfig);
+    // ...
+  }
+  
+  async sendMessage() {
+    // ❌ 没有缓存管理，每次都创建新实例
+    if (!this._modelAdapter) {
+      await this._initializeModel();
+    }
     const response = await this._modelAdapter.chat(messages);
   }
 }
@@ -443,7 +400,7 @@ const adapter = modelManager.getCurrentAdapter(modelConfig);
 | ✅ **事件驱动** | 可以添加模型变化通知机制 |
 | ✅ **易于测试** | 可以 Mock ModelManager 进行单元测试 |
 
-**优先级**：🟡 中
+**优先级**：🔴 高
 
 ---
 
@@ -612,22 +569,73 @@ class AgentConfigManager {
 
 ---
 
-### 8. skills.ts 未使用
+### 8. ~~skills.ts 未使用~~ ✅ 已整合
 
-**问题描述**：`skills.ts` 文件存在但未在核心流程中使用
+**状态**：✅ 已整合
 
-**位置**：`src/skills.ts`
+**实现位置**：
+- `src/tools/ToolRegistry.ts` - 工具注册表
+- `src/tools/skills.ts` - Skill 定义（GetActiveFileSkill）
 
-**问题**：
-- ⚠️ 代码冗余
-- ⚠️ 增加维护成本
-- ⚠️ 误导开发者
+**整合方案**：
+```typescript
+// ToolRegistry.ts
+export class ToolRegistry {
+  private static instance: ToolRegistry;
+  private tools: Map<string, Tool> = new Map();
+  
+  /**
+   * 注册 Skill
+   */
+  registerSkills(skills: Skill[]) {
+    for (const skill of skills) {
+      const wrappedTool: Tool = {
+        name: skill.name,
+        description: skill.description,
+        inputSchema: skill.inputSchema,
+        execute: (args) => skill.execute(args),
+        source: 'skill'
+      };
+      this.tools.set(skill.name, wrappedTool);
+      Logger.debug('注册 Skill', { name: skill.name, source: 'skill' });
+    }
+  }
+  
+  /**
+   * 获取所有工具（给 LLM 用）
+   */
+  listTools(): Tool[] {
+    return Array.from(this.tools.values());
+  }
+}
 
-**解决方案**：
-- **方案 A**：整合到 MCP 工具调用链
-- **方案 B**：删除该文件
+// skills.ts - 保留 VS Code 特定的 Skill
+export class GetActiveFileSkill implements Skill {
+  name = 'get-active-file';
+  description = '获取当前活动编辑器的文件信息';
+  
+  async execute(): Promise<{ filePath: string; content: string; language: string; selectedText: string } | null> {
+    const editor = vscode.window.activeTextEditor;
+    if (!editor) return null;
+    
+    const document = editor.document;
+    return {
+      filePath: document.fileName,
+      content: document.getText(),
+      language: document.languageId,
+      selectedText: document.getText(editor.selection)
+    };
+  }
+}
+```
 
-**优先级**：🟡 中
+**整合效果**：
+- ✅ Skill 通过 ToolRegistry 统一管理
+- ✅ 与 MCP 工具一起暴露给 LLM
+- ✅ 保留 VS Code 特定功能（如获取活动文件）
+- ✅ 文件操作功能由 MCP 工具提供（read_file, write_file 等）
+
+**优先级**：✅ 已完成
 
 ---
 
@@ -660,23 +668,80 @@ src/
 
 **问题描述**：Gemini 适配器缺少工具调用功能
 
-**位置**：`src/modelAdapter.ts` Line 258-329
+**位置**：`src/adapters/modelAdapter.ts` Line 256-329
+
+**当前实现**：
+```typescript
+export class GeminiAdapter implements ModelAdapter {
+  async chat(messages: Message[], model?: string, enableTools: boolean = true): Promise<string> {
+    // ❌ 没有实现工具调用逻辑
+    // 只支持简单的文本生成
+    const response = await this.genAI.models.generateContent({
+      model: modelName,
+      contents: lastUserMessage.parts[0].text,
+      config: {
+        systemInstruction: systemInstruction || undefined,
+        maxOutputTokens: 2048,
+        temperature: 0.7,
+      }
+    });
+    
+    return response.text || '';
+  }
+}
+```
+
+**对比 OpenAIAdapter**：
+```typescript
+// OpenAIAdapter 支持工具调用
+async chat(messages: Message[], model?: string, enableTools: boolean = true): Promise<string> {
+  const allTools = this.toolRegistry.listTools();
+  const tools = enableTools ? allTools.map(tool => ({
+    type: 'function' as const,
+    function: {
+      name: tool.name,
+      description: tool.description,
+      parameters: tool.inputSchema
+    }
+  })) : undefined;
+  
+  // 支持工具调用循环
+  while (iterationCount < MAX_ITERATIONS) {
+    const response = await this.client.chat.completions.create({
+      model: model || this.defaultModel,
+      messages: formattedMessages,
+      tools: tools
+    });
+    
+    // 处理工具调用
+    const toolCalls = response.choices[0].message.tool_calls;
+    if (toolCalls) {
+      // 执行工具并继续迭代
+    }
+  }
+}
+```
 
 **问题**：
-- ⚠️ 功能不完整
-- ⚠️ 用户体验不一致
+- ⚠️ 功能不完整（不支持 MCP 工具链）
+- ⚠️ 用户体验不一致（OpenAI 可以调用工具，Gemini 不行）
+- ⚠️ 限制了 Gemini 模型的能力
 
 **解决方案**：
 ```typescript
 class GeminiAdapter {
   async chat(messages: Message[], model?: string, enableTools: boolean = true) {
     // TODO: 实现工具调用
+    // 1. 从 ToolRegistry 获取工具
+    // 2. 调用 Gemini API 时传入 tools 参数
+    // 3. 处理 toolCalls 并执行工具
+    // 4. 支持多轮工具调用循环
     // 参考 OpenAIAdapter 的实现
   }
 }
 ```
 
-**优先级**：🟢 低
+**优先级**：🟡 中
 
 ---
 

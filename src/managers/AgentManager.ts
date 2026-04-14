@@ -1,3 +1,4 @@
+import * as vscode from 'vscode';
 import { Logger } from '../utils/Logger.js';
 import { AgentConfigManager } from './AgentConfigManager.js';
 import { AgentConfig } from '../types.js'
@@ -10,8 +11,11 @@ import { AgentConfig } from '../types.js'
 export class AgentManager {
   private static instance: AgentManager;
   private agents: Map<string, AgentConfig> = new Map();
+  private agentAccessTime: Map<string, number> = new Map();
+  private readonly MAX_CACHED_AGENTS = 10; // 最多缓存 10 个 Agent
   private currentAgentId: string = 'default';
   private agentConfigManager?: AgentConfigManager;
+  private configChangeListener?: vscode.Disposable;
 
   private constructor() {}
 
@@ -25,10 +29,16 @@ export class AgentManager {
   setAgentConfigManager(configManager: AgentConfigManager) {
     this.agentConfigManager = configManager;
     this.loadAgentsFromConfig();
+    
+    // 监听配置变化事件，自动重新加载 Agent
+    this.configChangeListener = configManager.onDidChangeConfig(() => {
+      Logger.info('检测到 Agent 配置变化，重新加载 Agent');
+      this.loadAgentsFromConfig();
+    });
   }
 
   /**
-   * 从配置文件加载 Agent
+   * 从配置文件加载 Agent（限制缓存数量）
    */
   private loadAgentsFromConfig() {
     if (!this.agentConfigManager) {
@@ -41,14 +51,18 @@ export class AgentManager {
       const agents = this.agentConfigManager.getAgents();
       this.agents.clear();
       
-      for (const agent of agents) {
+      // ✅ 只缓存前 N 个 Agent，避免内存浪费
+      const limitedAgents = agents.slice(0, this.MAX_CACHED_AGENTS);
+      for (const agent of limitedAgents) {
         this.agents.set(agent.id, agent);
       }
       
       this.currentAgentId = this.agentConfigManager.getDefaultAgent();
       
       Logger.info('从配置文件加载 Agent', { 
-        agentCount: this.agents.size,
+        total: agents.length,
+        cached: limitedAgents.length,
+        limit: this.MAX_CACHED_AGENTS,
         currentAgent: this.currentAgentId 
       });
     } catch (error) {
@@ -158,17 +172,52 @@ export class AgentManager {
   }
 
   /**
-   * 获取所有 Agent
+   * 获取所有 Agent（从配置文件读取，不是缓存）
    */
   getAllAgents(): AgentConfig[] {
+    // ✅ 从配置文件读取所有 Agent，而不是只返回缓存
+    // 这样配置面板和聊天页面可以看到所有 Agent
+    if (this.agentConfigManager) {
+      return this.agentConfigManager.getAgents();
+    }
+    // 降级处理：返回缓存的
     return Array.from(this.agents.values());
   }
 
   /**
-   * 获取 Agent
+   * 获取 Agent（支持按需加载）
    */
   getAgent(agentId: string): AgentConfig | undefined {
-    return this.agents.get(agentId);
+    // 先尝试从缓存获取
+    const cached = this.agents.get(agentId);
+    if (cached) {
+      return cached;
+    }
+    
+    // 缓存未命中，按需从配置文件加载
+    if (this.agentConfigManager) {
+      const agent = this.agentConfigManager.getAgentById(agentId);
+      if (agent) {
+        // 如果缓存已满，移除最旧的
+        if (this.agents.size >= this.MAX_CACHED_AGENTS) {
+          // 移除最久未访问的Agent
+          const oldestKey = Array.from(this.agentAccessTime.entries())
+            .sort(([,a], [,b]) => a - b)[0]?.[0];
+          if (oldestKey) {
+            this.agents.delete(oldestKey);
+            this.agentAccessTime.delete(oldestKey);
+          }
+        }
+        // 添加到缓存
+        this.agents.set(agentId, agent);
+        // 更新访问时间
+        this.agentAccessTime.set(agentId, Date.now());
+        Logger.debug('按需加载 Agent', { id: agentId, name: agent.name });
+        return agent;
+      }
+    }
+    
+    return undefined;
   }
 
   /**
@@ -252,6 +301,15 @@ export class AgentManager {
       }
     }
     return success;
+  }
+
+  /**
+   * 清理事件监听器
+   */
+  dispose() {
+    if (this.configChangeListener) {
+      this.configChangeListener.dispose();
+    }
   }
 }
 

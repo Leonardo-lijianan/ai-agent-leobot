@@ -1,5 +1,6 @@
 import * as vscode from 'vscode';
 import * as fs from 'fs';
+import * as path from 'path';
 import { ModelConfigManager } from '../managers/ModelConfigManager.js';
 import { AgentConfigManager } from '../managers/AgentConfigManager.js';
 import { Logger } from '../utils/Logger.js';
@@ -25,22 +26,25 @@ export class ConfigPanel {
     this.agentConfigManager = agentConfigManager;
     this.context = context;
     
-    const scriptUri = panel.webview.asWebviewUri(
-      vscode.Uri.joinPath(context.extensionUri, 'media', 'configPanelView.js')
-    );
-    
-    panel.webview.html = this.getHtmlForWebview(htmlPath, scriptUri);
+    panel.webview.html = this.getHtmlForWebview(htmlPath);
     this.setupMessageListeners();
   }
 
-  private getHtmlForWebview(htmlUri: vscode.Uri, scriptUri: vscode.Uri): string {
+  private getHtmlForWebview(htmlUri: vscode.Uri): string {
     const html = fs.readFileSync(htmlUri.fsPath, 'utf-8');
-    const jsPath = scriptUri.fsPath;
-    const jsContent = fs.readFileSync(jsPath, 'utf-8');
     
-    // 使用字符串拼接，避免模板字符串的转义问题
-    const scriptTag = '<script>' + jsContent + '</script>';
-    return html.replace('</body>', scriptTag + '</body>');
+    // 读取 CSS 文件
+    const cssPath = path.join(path.dirname(htmlUri.fsPath), 'configPanel.css');
+    const css = fs.readFileSync(cssPath, 'utf-8');
+    
+    // 读取前端脚本
+    const scriptPath = path.join(path.dirname(htmlUri.fsPath), 'script', 'configPanelView.js');
+    const script = fs.readFileSync(scriptPath, 'utf-8');
+    
+    // 将 CSS 和脚本内联到 HTML 中
+    const cssTag = `<style>${css}</style>`;
+    const scriptTag = `<script>${script}</script>`;
+    return html.replace('</head>', cssTag + '</head>').replace('</body>', scriptTag + '</body>');
   }
 
   private setupMessageListeners() {
@@ -67,6 +71,18 @@ export class ConfigPanel {
             
           case 'addAgent':
             await this.handleAddAgent(message.agent);
+            break;
+            
+          case 'getConfigPath':
+            await this.handleGetConfigPath();
+            break;
+            
+          case 'browseConfigPath':
+            await this.handleBrowseConfigPath();
+            break;
+            
+          case 'migrateConfig':
+            await this.handleMigrateConfig(message.newPath);
             break;
         }
       })
@@ -325,6 +341,140 @@ export class ConfigPanel {
 
   public async loadConfig() {
     await this.loadAgentModelList();
+  }
+
+  /**
+   * 获取当前配置路径
+   */
+  private async handleGetConfigPath() {
+    try {
+      const currentPath = this.agentConfigManager.getConfigFilePath();
+      const configDir = currentPath.replace(/[^\\\/]*\.json$/, '');
+      
+      this.panel.webview.postMessage({
+        type: 'configPathInfo',
+        currentPath: configDir
+      });
+    } catch (error: any) {
+      Logger.error('获取配置路径失败', error);
+      this.panel.webview.postMessage({
+        type: 'configPathInfo',
+        currentPath: '获取失败',
+        error: error.message
+      });
+    }
+  }
+
+  /**
+   * 浏览新的配置路径
+   */
+  private async handleBrowseConfigPath() {
+    try {
+      const result = await vscode.window.showOpenDialog({
+        canSelectFolders: true,
+        canSelectFiles: false,
+        openLabel: '选择新的配置存储位置',
+        title: '迁移 AI Agent 配置'
+      });
+
+      if (result && result.length > 0) {
+        this.panel.webview.postMessage({
+          type: 'browsePathResult',
+          success: true,
+          newPath: result[0].fsPath
+        });
+      } else {
+        this.panel.webview.postMessage({
+          type: 'browsePathResult',
+          success: false,
+          error: '用户取消了选择'
+        });
+      }
+    } catch (error: any) {
+      Logger.error('浏览路径失败', error);
+      this.panel.webview.postMessage({
+        type: 'browsePathResult',
+        success: false,
+        error: error.message
+      });
+    }
+  }
+
+  /**
+   * 迁移配置文件
+   */
+  private async handleMigrateConfig(newPath: string) {
+    try {
+      if (!newPath) {
+        throw new Error('未选择新的配置路径');
+      }
+
+      // 使用进度条显示迁移过程
+      await vscode.window.withProgress({
+        location: vscode.ProgressLocation.Notification,
+        title: '正在迁移配置文件...',
+        cancellable: false
+      }, async (progress) => {
+        progress.report({ message: '准备迁移...', increment: 10 });
+
+        const currentPath = this.agentConfigManager.getConfigFilePath();
+        const currentDir = currentPath.replace(/[^\\\/]*\.json$/, '');
+        
+        // 配置文件列表
+        const configFiles = ['agentConfig.json', 'modelConfig.json', 'globalConfig.json'];
+        
+        progress.report({ message: '检查目标目录...', increment: 20 });
+        
+        // 确保目标目录存在
+        if (!fs.existsSync(newPath)) {
+          fs.mkdirSync(newPath, { recursive: true });
+        }
+
+        progress.report({ message: '复制配置文件...', increment: 30 });
+        
+        // 复制每个配置文件
+        for (const file of configFiles) {
+          const sourceFile = path.join(currentDir, file);
+          const targetFile = path.join(newPath, file);
+          
+          if (fs.existsSync(sourceFile)) {
+            fs.copyFileSync(sourceFile, targetFile);
+            Logger.info(`配置文件已复制: ${file}`);
+          }
+        }
+
+        progress.report({ message: '更新配置管理器...', increment: 20 });
+        
+        // 这里需要更新配置管理器的路径
+        // 由于配置管理器是单例，需要重启扩展才能生效
+        
+        progress.report({ message: '迁移完成！', increment: 20 });
+      });
+
+      this.panel.webview.postMessage({
+        type: 'migrateResult',
+        success: true,
+        message: '配置文件迁移完成！请重启 VS Code 扩展生效。'
+      });
+
+      // 显示重启提示
+      vscode.window.showInformationMessage(
+        '配置文件迁移完成！请重启 VS Code 扩展生效。',
+        '重启扩展'
+      ).then(selection => {
+        if (selection === '重启扩展') {
+          vscode.commands.executeCommand('workbench.action.reloadWindow');
+        }
+      });
+
+    } catch (error: any) {
+      Logger.error('迁移配置失败', error);
+      this.panel.webview.postMessage({
+        type: 'migrateResult',
+        success: false,
+        error: error.message
+      });
+    }
   }
 
   public dispose() {

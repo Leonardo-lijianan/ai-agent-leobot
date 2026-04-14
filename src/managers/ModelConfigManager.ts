@@ -4,7 +4,8 @@ import * as path from 'path';
 import { ModelConfig } from '../types.js';
 import { Logger } from '../utils/Logger.js';
 import { encrypt, decrypt } from '../utils/crypto.js';
-import { AgentModelConfig, ModelConfigFile } from '../types.js'
+import { ModelConfigFile } from '../types.js';
+import { GlobalConfigManager } from './GlobalConfigManager.js';
 
 const CONFIG_FILE_NAME = 'modelConfig.json';
 
@@ -12,6 +13,8 @@ export class ModelConfigManager {
   private static instance: ModelConfigManager;
   private configPath: string = '';
   private _context?: vscode.ExtensionContext;
+  private _onDidChangeConfig = new vscode.EventEmitter<void>();
+  public readonly onDidChangeConfig = this._onDidChangeConfig.event;
   
   private constructor() {}
 
@@ -52,10 +55,8 @@ export class ModelConfigManager {
             modelId: 'Qwen/Qwen3.5-122B-A10B'
           }
         ],
-        defaultModel: '硅基流动',
-        currentAgent: 'default',
-        agentModels: [], // 初始化为空数组
-        agentModeEnabled: true // 默认启用 Agent 模式
+        defaultModel: '硅基流动'
+        // ✅ currentAgent、agentModels、agentModeEnabled 已迁移到 GlobalConfigManager
       };
       
       fs.writeFileSync(this.configPath, JSON.stringify(defaultConfig, null, 2), 'utf-8');
@@ -93,6 +94,7 @@ export class ModelConfigManager {
     const config = this.readConfig();
     config.models = models;
     this.writeConfig(config);
+    this._onDidChangeConfig.fire();
   }
 
   getDefaultModel(): string {
@@ -104,6 +106,7 @@ export class ModelConfigManager {
     const config = this.readConfig();
     config.defaultModel = modelName;
     this.writeConfig(config);
+    this._onDidChangeConfig.fire();
   }
 
   async getApiKey(modelName: string): Promise<string | undefined> {
@@ -146,75 +149,17 @@ export class ModelConfigManager {
     return models.find(m => m.id === name);
   }
 
-  async getCurrentAgent(): Promise<string> {
-    const config = this.readConfig();
-    return config.currentAgent || 'default';
-  }
-
-  async setCurrentAgent(agentId: string): Promise<void> {
-    const config = this.readConfig();
-    config.currentAgent = agentId;
-    this.writeConfig(config);
-  }
-
-  getAgentModels(): AgentModelConfig[] {
-    const config = this.readConfig();
-    return config.agentModels || [];
-  }
-
-  async setAgentModel(agentId: string, agentName: string, modelId: string): Promise<void> {
-    const config = this.readConfig();
-    
-    // 查找是否已存在该 Agent 的配置
-    const existingIndex = config.agentModels.findIndex(am => am.id === agentId);
-    
-    if (existingIndex !== -1) {
-      // 更新现有配置
-      config.agentModels[existingIndex].modelId = modelId;
-    } else {
-      // 添加新配置
-      config.agentModels.push({
-        id: agentId,
-        name: agentName,
-        modelId: modelId
-      });
-    }
-    
-    this.writeConfig(config);
-  }
-
-  async removeAgentModel(agentId: string): Promise<void> {
-    const config = this.readConfig();
-    config.agentModels = config.agentModels.filter(am => am.id !== agentId);
-    this.writeConfig(config);
-  }
-
-  getAgentModel(agentId: string): string | undefined {
-    const config = this.readConfig();
-    const agentModel = config.agentModels.find(am => am.id === agentId);
-    return agentModel?.modelId;
-  }
-
-  isAgentModeEnabled(): boolean {
-    const config = this.readConfig();
-    return config.agentModeEnabled !== false; // 默认为 true
-  }
-
-  async setAgentModeEnabled(enabled: boolean): Promise<void> {
-    const config = this.readConfig();
-    config.agentModeEnabled = enabled;
-    this.writeConfig(config);
-  }
-
   async getCurrentAgentAndModel(): Promise<{
     agentModeEnabled: boolean,
     currentAgent: string,
     defaultModel: string
   }> {
+    // ✅ 从 GlobalConfigManager 获取运行时配置
+    const globalConfigManager = GlobalConfigManager.getInstance();
     const config = this.readConfig();
     return {
-      agentModeEnabled: config.agentModeEnabled !== false,
-      currentAgent: config.currentAgent || 'default',
+      agentModeEnabled: globalConfigManager.isAgentModeEnabled(),
+      currentAgent: globalConfigManager.getCurrentAgent(),
       defaultModel: config.defaultModel || '硅基流动'
     };
   }

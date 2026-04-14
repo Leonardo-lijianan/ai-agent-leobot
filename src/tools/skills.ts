@@ -1,77 +1,14 @@
 import * as vscode from 'vscode';
-import * as fs from 'fs';
-import * as path from 'path';
 import { Logger } from '../utils/Logger.js';
 import { Skill } from '../types.js';
 
-export class FileReadSkill implements Skill {
-  name = 'file-read';
-  description = '读取文件内容';
-  inputSchema: {
-    type: 'object';
-    properties: {
-      filePath: { type: 'string'; description: '要读取的文件路径' }
-    };
-    required: string[];
-  } = {
-    type: 'object' as const,
-    properties: {
-      filePath: { type: 'string', description: '要读取的文件路径' }
-    },
-    required: ['filePath']
-  };
-
-  async execute(input: { filePath: string }): Promise<string> {
-    const filePath = input.filePath;
-    
-    if (!filePath) {
-      Logger.errorAndThrow('未提供文件路径');
-    }
-
-    if (!fs.existsSync(filePath)) {
-      Logger.errorAndThrow(`文件不存在：${filePath}`);
-    }
-
-    const content = fs.readFileSync(filePath, 'utf-8');
-    return content;
-  }
-}
-
-export class FileWriteSkill implements Skill {
-  name = 'file-write';
-  description = '写入文件内容';
-  inputSchema: {
-    type: 'object';
-    properties: {
-      filePath: { type: 'string'; description: '要写入的文件路径' };
-      content: { type: 'string'; description: '要写入的内容' };
-    };
-    required: string[];
-  } = {
-    type: 'object' as const,
-    properties: {
-      filePath: { type: 'string', description: '要写入的文件路径' },
-      content: { type: 'string', description: '要写入的内容' }
-    },
-    required: ['filePath', 'content']
-  };
-
-  async execute(input: { filePath: string; content: string }): Promise<void> {
-    const { filePath, content } = input;
-    
-    if (!filePath) {
-      Logger.errorAndThrow('未提供文件路径');
-    }
-
-    const dir = path.dirname(filePath);
-    if (!fs.existsSync(dir)) {
-      fs.mkdirSync(dir, { recursive: true });
-    }
-
-    fs.writeFileSync(filePath, content, 'utf-8');
-  }
-}
-
+/**
+ * 获取当前活动编辑器文件信息的 Skill
+ * 
+ * 注意：这是 VS Code 特定的功能，MCP 工具无法替代
+ * MCP 工具提供通用的文件操作（read_file, write_file 等）
+ * 但无法访问 VS Code 的编辑器状态
+ */
 export class GetActiveFileSkill implements Skill {
   name = 'get-active-file';
   description = '获取当前活动编辑器的文件信息';
@@ -122,8 +59,8 @@ export class SkillManager {
   }
 
   private registerDefaultSkills() {
-    this.register(new FileReadSkill());
-    this.register(new FileWriteSkill());
+    // 只注册 VS Code 特定的 Skill
+    // 文件操作功能已由 MCP 工具提供（read_file, write_file 等）
     this.register(new GetActiveFileSkill());
   }
 

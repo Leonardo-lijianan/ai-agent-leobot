@@ -42,9 +42,10 @@ export interface AgentModelConfig {
 export interface ModelConfigFile {
   models: ModelConfig[];
   defaultModel: string;
-  currentAgent: string;
-  agentModels: AgentModelConfig[]; // Agent 和模型的关联
-  agentModeEnabled?: boolean; // 是否启用 Agent 模式
+  // ✅ currentAgent、agentModels、agentModeEnabled 已迁移到 GlobalConfigManager
+  currentAgent?: string; // 兼容旧配置（迁移后删除）
+  agentModels?: AgentModelConfig[]; // 兼容旧配置（迁移后删除）
+  agentModeEnabled?: boolean; // 兼容旧配置（迁移后删除）
 }
 
 export interface AgentConfigFile {

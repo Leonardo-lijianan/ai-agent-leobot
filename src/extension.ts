@@ -3,6 +3,7 @@ import { ChatViewProvider } from './features/ChatView.js';
 import { ConfigManager } from './configManager.js';
 import { ModelConfigManager } from './managers/ModelConfigManager.js';
 import { AgentConfigManager } from './managers/AgentConfigManager.js';
+import { GlobalConfigManager } from './managers/GlobalConfigManager.js';
 import { SkillManager } from './tools/skills.js';
 import { Logger } from './utils/Logger.js';
 import { agentManager } from './managers/AgentManager.js';
@@ -10,6 +11,7 @@ import { ToolRegistry } from './tools/ToolRegistry.js';
 import { mcpServer } from './tools/mcp.js';
 import { ConfigPanel } from './features/ConfigPanel.js';
 import { chatHistoryManager } from './managers/ChatHistoryManager.js';
+import { ConfigMigrationTool } from './utils/ConfigMigrationTool.js';
 
 export function activate(context: vscode.ExtensionContext) {
   // 初始化日志系统
@@ -23,6 +25,26 @@ export function activate(context: vscode.ExtensionContext) {
   // 使用独立的 AgentConfigManager 管理 Agent 配置
   const agentConfigManager = AgentConfigManager.getInstance();
   agentConfigManager.setContext(context);
+  
+  // 初始化 GlobalConfigManager 管理全局运行时配置
+  const globalConfigManager = GlobalConfigManager.getInstance();
+  globalConfigManager.setContext(context);
+  
+  // 检查并执行配置迁移
+  const path = require('path');
+  const modelConfigPath = path.join(context.globalStorageUri.fsPath, 'modelConfig.json');
+  const globalConfigPath = path.join(context.globalStorageUri.fsPath, 'globalConfig.json');
+  
+  if (ConfigMigrationTool.needsMigration(modelConfigPath)) {
+    Logger.info('检测到旧配置格式，开始迁移...');
+    ConfigMigrationTool.migrate(modelConfigPath, globalConfigPath).then(success => {
+      if (success) {
+        Logger.success('配置迁移成功！');
+      } else {
+        Logger.error('配置迁移失败，请手动处理');
+      }
+    });
+  }
   
   // 保留 ConfigManager 用于其他配置（如果需要）
   const configManager = ConfigManager.getInstance();
@@ -98,6 +120,12 @@ export function activate(context: vscode.ExtensionContext) {
   );
 
   Logger.success('所有命令已注册，扩展准备就绪');
+}
+
+export function deactivate() {
+  // 清理事件监听器
+  agentManager.dispose();
+  Logger.info('AI Agent LeoBot 已停用');
 }
 
 /**
@@ -208,10 +236,4 @@ ${selectedText}
 
   await chatViewProvider.sendMessage(prompt);
   Logger.success('代码优化请求已发送');
-}
-
-
-
-export function deactivate() {
-  Logger.info('AI Agent LeoBot 已停用');
 }

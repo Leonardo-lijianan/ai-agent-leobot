@@ -5,137 +5,6 @@
   <meta name="viewport" content="width=device-width, initial-scale=1.0">
   <meta http-equiv="Content-Security-Policy" content="default-src 'none'; style-src 'unsafe-inline'; script-src 'unsafe-inline';">
   <title>AI Agent LeoBot 配置</title>
-  <style>
-    * {
-      margin: 0;
-      padding: 0;
-      box-sizing: border-box;
-    }
-    
-    body {
-      font-family: var(--vscode-font-family);
-      font-size: var(--vscode-font-size);
-      color: var(--vscode-foreground);
-      background-color: var(--vscode-sideBar-background);
-      padding: 20px;
-    }
-    
-    h2 {
-      margin-bottom: 20px;
-      font-weight: 600;
-    }
-    
-    .form-group {
-      margin-bottom: 20px;
-    }
-    
-    label {
-      display: block;
-      margin-bottom: 8px;
-      font-weight: 500;
-    }
-    
-    input[type="text"],
-    input[type="password"],
-    select,
-    textarea {
-      width: 100%;
-      padding: 8px 12px;
-      border: 1px solid var(--vscode-input-border);
-      border-radius: 4px;
-      background-color: var(--vscode-input-background);
-      color: var(--vscode-input-foreground);
-      font-family: var(--vscode-font-family);
-      font-size: var(--vscode-font-size);
-    }
-    
-    input:focus,
-    select:focus,
-    textarea:focus {
-      outline: 1px solid var(--vscode-focusBorder);
-    }
-    
-    /* 修复下拉菜单选项的主题适配 */
-    select option {
-      background-color: var(--vscode-dropdown-background);
-      color: var(--vscode-dropdown-foreground);
-    }
-    
-    .button-group {
-      display: flex;
-      gap: 10px;
-      margin-top: 30px;
-    }
-    
-    button {
-      padding: 10px 20px;
-      border: none;
-      border-radius: 4px;
-      cursor: pointer;
-      font-size: var(--vscode-font-size);
-      font-family: var(--vscode-font-family);
-    }
-    
-    button.primary {
-      background-color: var(--vscode-button-background);
-      color: var(--vscode-button-foreground);
-    }
-    
-    button.secondary {
-      background-color: var(--vscode-button-secondaryBackground);
-      color: var(--vscode-button-secondaryForeground);
-    }
-    
-    button:hover {
-      opacity: 0.9;
-    }
-    
-    button:disabled {
-      opacity: 0.5;
-      cursor: not-allowed;
-    }
-    
-    .status {
-      margin-top: 15px;
-      padding: 10px;
-      border-radius: 4px;
-      display: none;
-    }
-    
-    .status.success {
-      background-color: rgba(0, 255, 0, 0.1);
-      border: 1px solid var(--vscode-testing-iconPassed);
-      color: var(--vscode-testing-iconPassed);
-    }
-    
-    .status.error {
-      background-color: rgba(255, 0, 0, 0.1);
-      border: 1px solid var(--vscode-errorForeground);
-      color: var(--vscode-errorForeground);
-    }
-    
-    .hint {
-      font-size: 0.9em;
-      color: var(--vscode-descriptionForeground);
-      margin-top: 4px;
-    }
-    
-    input:disabled {
-      opacity: 0.6;
-      cursor: not-allowed;
-      background-color: var(--vscode-input-background);
-    }
-    
-    .info-badge {
-      display: inline-block;
-      background-color: var(--vscode-badge-background);
-      color: var(--vscode-badge-foreground);
-      padding: 2px 8px;
-      border-radius: 12px;
-      font-size: 0.85em;
-      margin-left: 8px;
-    }
-  </style>
 </head>
 <body>
   <h2 id="configTitle">⚙️ AI Agent LeoBot 配置</h2>
@@ -151,6 +20,7 @@
   <div class="button-group">
     <button id="editModelBtn" class="primary">✏️ 编辑模型配置</button>
     <button id="addAgentBtn" class="secondary">➕ 新增 Agent</button>
+    <button id="migrateConfigBtn" class="secondary">📦 迁移配置</button>
   </div>
   
   <div id="status" class="status"></div>
@@ -258,7 +128,56 @@
     </div>
   </div>
 
+  <!-- 迁移配置模态框 -->
+  <div id="migrateConfigModal" style="display: none; position: fixed; top: 0; left: 0; width: 100%; height: 100%; background: rgba(0,0,0,0.5); z-index: 1000;">
+    <div style="position: absolute; top: 50%; left: 50%; transform: translate(-50%, -50%); background: var(--vscode-sideBar-background); padding: 20px; border-radius: 8px; width: 600px; max-height: 80vh; overflow-y: auto;">
+      <h3 style="margin-bottom: 20px;">📦 迁移配置</h3>
+      
+      <div class="form-group">
+        <label>当前配置路径</label>
+        <div style="padding: 8px 12px; background: var(--vscode-input-background); border: 1px solid var(--vscode-input-border); border-radius: 4px;">
+          <code id="currentConfigPath">加载中...</code>
+        </div>
+        <div class="hint">当前配置文件存储位置</div>
+      </div>
+      
+      <div class="form-group">
+        <label>迁移到新位置</label>
+        <div style="display: flex; gap: 10px;">
+          <input type="text" id="newConfigPath" placeholder="选择新的配置存储位置" readonly style="flex: 1;" />
+          <button id="browsePathBtn" class="secondary">浏览</button>
+        </div>
+        <div class="hint">选择新的文件夹来存储配置文件（避免 C 盘空间不足）</div>
+      </div>
+      
+      <div class="form-group">
+        <label>迁移文件列表</label>
+        <div id="migrateFileList" style="padding: 8px 12px; background: var(--vscode-input-background); border: 1px solid var(--vscode-input-border); border-radius: 4px; max-height: 120px; overflow-y: auto;">
+          <div>• agentConfig.json</div>
+          <div>• modelConfig.json</div>
+          <div>• globalConfig.json</div>
+        </div>
+        <div class="hint">将迁移以下配置文件</div>
+      </div>
+      
+      <div class="button-group" style="margin-top: 20px;">
+        <button id="confirmMigrateBtn" class="primary" disabled>🚀 开始迁移</button>
+        <button id="cancelMigrateBtn" class="secondary">取消</button>
+      </div>
+      
+      <div id="migrateStatus" class="status" style="margin-top: 15px;"></div>
+      
+      <div style="margin-top: 15px; padding: 10px; background: var(--vscode-input-background); border-radius: 4px;">
+        <strong>💡 迁移说明：</strong>
+        <ul style="margin: 8px 0; padding-left: 20px;">
+          <li>迁移后配置文件将存储在新位置</li>
+          <li>原文件将保留作为备份</li>
+          <li>迁移完成后需要重启扩展生效</li>
+          <li>建议选择 D 盘或其他数据盘</li>
+        </ul>
+      </div>
+    </div>
+  </div>
 
-  
 </body>
 </html>

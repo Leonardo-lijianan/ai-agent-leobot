@@ -11,6 +11,8 @@ export class AgentConfigManager {
   private static instance: AgentConfigManager;
   private configPath: string = '';
   private _context?: vscode.ExtensionContext;
+  private _onDidChangeConfig = new vscode.EventEmitter<void>();
+  public readonly onDidChangeConfig = this._onDidChangeConfig.event;
   
   private constructor() {}
 
@@ -128,6 +130,7 @@ export class AgentConfigManager {
     const config = this.readConfig();
     config.agents = agents;
     this.writeConfig(config);
+    this._onDidChangeConfig.fire();
   }
 
   getAgentById(id: string): AgentConfig | undefined {
@@ -154,6 +157,7 @@ export class AgentConfigManager {
     
     config.agents.push(agent);
     this.writeConfig(config);
+    this._onDidChangeConfig.fire();
   }
 
   async updateAgent(id: string, agent: Partial<AgentConfig>): Promise<void> {
@@ -166,12 +170,14 @@ export class AgentConfigManager {
     
     config.agents[index] = { ...config.agents[index], ...agent };
     this.writeConfig(config);
+    this._onDidChangeConfig.fire();
   }
 
   async removeAgent(id: string): Promise<void> {
     const config = this.readConfig();
     config.agents = config.agents.filter(a => a.id !== id);
     this.writeConfig(config);
+    this._onDidChangeConfig.fire();
   }
 
   getDefaultAgent(): string {
@@ -183,6 +189,7 @@ export class AgentConfigManager {
     const config = this.readConfig();
     config.defaultAgent = agentId;
     this.writeConfig(config);
+    this._onDidChangeConfig.fire();
   }
 
   async setAgentModel(agentId: string, modelId: string): Promise<void> {
@@ -195,5 +202,13 @@ export class AgentConfigManager {
     
     config.agents[index].modelConfigId = modelId;
     this.writeConfig(config);
+    this._onDidChangeConfig.fire();
+  }
+
+  /**
+   * 获取配置文件路径（供迁移功能使用）
+   */
+  getConfigFilePath(): string {
+    return this.configPath;
   }
 }

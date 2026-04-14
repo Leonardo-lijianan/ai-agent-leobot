@@ -5,6 +5,7 @@ declare function acquireVsCodeApi(): any;
   const vscode = acquireVsCodeApi();
   console.log('[ConfigPanel] vscode API 已获取');
   
+  // 获取 DOM 元素
   const agentSelect = document.getElementById('agent') as HTMLSelectElement;
   const editModelBtn = document.getElementById('editModelBtn') as HTMLButtonElement;
   const addAgentBtn = document.getElementById('addAgentBtn') as HTMLButtonElement;
@@ -33,6 +34,22 @@ declare function acquireVsCodeApi(): any;
   const addAgentStatus = document.getElementById('addAgentStatus') as HTMLDivElement;
   const confirmAddAgent = document.getElementById('confirmAddAgent') as HTMLButtonElement;
   const cancelAddAgent = document.getElementById('cancelAddAgent') as HTMLButtonElement;
+  
+  // 迁移配置相关元素
+  const migrateConfigBtn = document.getElementById('migrateConfigBtn') as HTMLButtonElement;
+  const migrateConfigModal = document.getElementById('migrateConfigModal') as HTMLDivElement;
+  const currentConfigPath = document.getElementById('currentConfigPath') as HTMLElement;
+  const newConfigPath = document.getElementById('newConfigPath') as HTMLInputElement;
+  const browsePathBtn = document.getElementById('browsePathBtn') as HTMLButtonElement;
+  const confirmMigrateBtn = document.getElementById('confirmMigrateBtn') as HTMLButtonElement;
+  const cancelMigrateBtn = document.getElementById('cancelMigrateBtn') as HTMLButtonElement;
+  const migrateStatus = document.getElementById('migrateStatus') as HTMLDivElement;
+  
+  // 检查元素是否存在
+  if (!editModelBtn || !editModelModal) {
+    console.error('[ConfigPanel] 关键元素不存在！');
+    return;
+  }
   
   let currentEditingAgentId: string | null = null;
   
@@ -156,6 +173,52 @@ declare function acquireVsCodeApi(): any;
       }
     });
   });
+
+  // 迁移配置按钮事件
+  migrateConfigBtn.addEventListener('click', () => {
+    console.log('[ConfigPanel] 点击迁移配置按钮');
+    
+    // 显示当前配置路径
+    vscode.postMessage({
+      type: 'getConfigPath'
+    });
+    
+    migrateConfigModal.style.display = 'block';
+    migrateStatus.style.display = 'none';
+    newConfigPath.value = '';
+    confirmMigrateBtn.disabled = true;
+  });
+
+  // 浏览路径按钮
+  browsePathBtn.addEventListener('click', () => {
+    console.log('[ConfigPanel] 点击浏览路径按钮');
+    
+    vscode.postMessage({
+      type: 'browseConfigPath'
+    });
+  });
+
+  // 确认迁移按钮
+  confirmMigrateBtn.addEventListener('click', () => {
+    const newPath = newConfigPath.value.trim();
+    if (!newPath) {
+      showStatus('请先选择新的配置路径', 'error');
+      return;
+    }
+    
+    console.log('[ConfigPanel] 开始迁移配置到:', newPath);
+    
+    vscode.postMessage({
+      type: 'migrateConfig',
+      newPath: newPath
+    });
+  });
+
+  // 取消迁移按钮
+  cancelMigrateBtn.addEventListener('click', () => {
+    migrateConfigModal.style.display = 'none';
+    migrateStatus.style.display = 'none';
+  });
   
   window.addEventListener('message', (event) => {
     const message = event.data;
@@ -240,6 +303,48 @@ declare function acquireVsCodeApi(): any;
         }
       }
     }
+    
+    // 迁移配置相关消息处理
+    if (message.type === 'configPathInfo') {
+      currentConfigPath.textContent = message.currentPath || '获取失败';
+      if (message.error) {
+        migrateStatus.textContent = '❌ 获取配置路径失败：' + message.error;
+        migrateStatus.className = 'status error';
+        migrateStatus.style.display = 'block';
+      }
+    }
+    
+    if (message.type === 'browsePathResult') {
+      if (message.success) {
+        newConfigPath.value = message.newPath;
+        confirmMigrateBtn.disabled = false;
+        migrateStatus.textContent = '✅ 路径选择成功';
+        migrateStatus.className = 'status success';
+        migrateStatus.style.display = 'block';
+      } else {
+        migrateStatus.textContent = '❌ 路径选择失败：' + (message.error || '未知错误');
+        migrateStatus.className = 'status error';
+        migrateStatus.style.display = 'block';
+      }
+    }
+    
+    if (message.type === 'migrateResult') {
+      if (message.success) {
+        migrateStatus.textContent = '✅ ' + (message.message || '迁移成功！');
+        migrateStatus.className = 'status success';
+        migrateStatus.style.display = 'block';
+        
+        // 3秒后关闭模态框
+        setTimeout(() => {
+          migrateConfigModal.style.display = 'none';
+          migrateStatus.style.display = 'none';
+        }, 3000);
+      } else {
+        migrateStatus.textContent = '❌ 迁移失败：' + (message.error || '未知错误');
+        migrateStatus.className = 'status error';
+        migrateStatus.style.display = 'block';
+      }
+    }
   });
   
   function showStatus(message: string, type: string) {
@@ -252,4 +357,6 @@ declare function acquireVsCodeApi(): any;
       statusDiv.style.display = 'none';
     }, 5000);
   }
+  
+  console.log('[ConfigPanel] 脚本执行完成');
 })();

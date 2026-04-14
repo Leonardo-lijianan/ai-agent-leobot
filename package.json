@@ -123,11 +123,11 @@
     }
   },
   "scripts": {
-    "vscode:prepublish": "npm run compile:backend && npm run compile:frontend && node esbuild.js --production",
-    "compile": "npm run compile:backend && npm run compile:frontend",
+    "vscode:prepublish": "npm run compile:frontend && npm run compile:backend && node esbuild.js --production",
+    "compile": "npm run compile:frontend && npm run compile:backend",
     "compile:backend": "tsc -p ./",
     "compile:frontend": "tsc -p tsconfig.frontend.json",
-    "compile:all": "npm run compile:backend && npm run compile:frontend",
+    "compile:all": "npm run compile:frontend && npm run compile:backend",
     "watch": "npm-run-all -p watch:backend watch:frontend",
     "watch:backend": "tsc -watch -p ./",
     "watch:frontend": "tsc -watch -p tsconfig.frontend.json",

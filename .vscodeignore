@@ -17,5 +17,4 @@ out/*.js
 out/*.json
 media/*.txt
 node_modules/**
-dist/*.js  ← 排除旧的 .js 文件，只保留 .cjs
-
+media/*.js.map
