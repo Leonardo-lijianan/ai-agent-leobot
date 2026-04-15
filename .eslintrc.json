@@ -1,0 +1,12 @@
+{
+  "rules": {
+    "no-restricted-syntax": [
+      "error",
+      {
+        "selector": "SpreadElement",
+        "message": "对象扩展运算符 (...) 被禁止，请使用 Object.assign。"
+      }
+    ],
+    "@typescript-eslint/no-spread": "error"
+  }
+}

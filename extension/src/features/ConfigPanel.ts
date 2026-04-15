@@ -2,10 +2,12 @@ import * as vscode from 'vscode';
 import * as fs from 'fs';
 import * as path from 'path';
 import { ModelConfigManager } from '../managers/ModelConfigManager.js';
+import { GlobalConfigManager } from '../managers/GlobalConfigManager.js';
 import { AgentConfigManager } from '../managers/AgentConfigManager.js';
 import { Logger } from '../utils/Logger.js';
 import { ModelConfig, AgentConfig } from '../types.js';
 import { createModelAdapter } from '../adapters/modelAdapter.js';
+import { getHtmlForWebview } from '../utils/loadMedia.js';
 
 export class ConfigPanel {
   private panel: vscode.WebviewPanel;
@@ -13,64 +15,57 @@ export class ConfigPanel {
   private modelConfigManager: ModelConfigManager;
   private agentConfigManager: AgentConfigManager;
   private context: vscode.ExtensionContext;
+  private readonly _extensionPath: string;
 
   constructor(
     panel: vscode.WebviewPanel,
     modelConfigManager: ModelConfigManager,
     agentConfigManager: AgentConfigManager,
-    context: vscode.ExtensionContext,
-    htmlPath: vscode.Uri
+    context: vscode.ExtensionContext
   ) {
     this.panel = panel;
     this.modelConfigManager = modelConfigManager;
     this.agentConfigManager = agentConfigManager;
     this.context = context;
+    this._extensionPath = context.extensionPath;
     
-    panel.webview.html = this.getHtmlForWebview(htmlPath);
+    panel.webview.html = this.getHtmlForWebview();
     this.setupMessageListeners();
   }
 
-  private getHtmlForWebview(htmlUri: vscode.Uri): string {
-    const html = fs.readFileSync(htmlUri.fsPath, 'utf-8');
-    
-    // 读取 CSS 文件
-    const cssPath = path.join(path.dirname(htmlUri.fsPath), 'configPanel.css');
-    const css = fs.readFileSync(cssPath, 'utf-8');
-    
-    // 读取前端脚本
-    const scriptPath = path.join(path.dirname(htmlUri.fsPath), 'script', 'configPanelView.js');
-    const script = fs.readFileSync(scriptPath, 'utf-8');
-    
-    // 将 CSS 和脚本内联到 HTML 中
-    const cssTag = `<style>${css}</style>`;
-    const scriptTag = `<script>${script}</script>`;
-    return html.replace('</head>', cssTag + '</head>').replace('</body>', scriptTag + '</body>');
+  private getHtmlForWebview(): string {
+    // 使用 loadMedia.ts 来加载 HTML
+    return getHtmlForWebview(this._extensionPath, 'config_panel.html', 'config_panel.css', 'config_panel.js');
   }
 
   private setupMessageListeners() {
     this.disposables.push(
       this.panel.webview.onDidReceiveMessage(async (message) => {
-        Logger.config('收到消息', message);
+        Logger.config('[ConfigPanel] 收到消息', message);
         
         switch (message.type) {
-          case 'editModel':
-            await this.handleEditModel(message.agentId);
+          case 'loadConfig':
+            await this.handleLoadConfig(message.configType, message.id);
             break;
             
           case 'testModelConfig':
             await this.handleTestModelConfig(message.config, message.agentId);
             break;
             
-          case 'saveModelConfig':
-            await this.handleSaveModelConfig(message.config, message.agentId);
+          case 'addConfig':
+            await this.handleAddConfig(message.configType, message.config);
+            break;
+            
+          case 'changeConfig':
+            await this.handleChangeConfig(message.configType, message.config);
+            break;
+            
+          case 'deleteConfig':
+            await this.handleDeleteConfig(message.configType, message.id);
             break;
             
           case 'listModels':
             await this.handleListModels(message.provider, message.endpoint, message.apiKey);
-            break;
-            
-          case 'addAgent':
-            await this.handleAddAgent(message.agent);
             break;
             
           case 'getConfigPath':
@@ -89,24 +84,133 @@ export class ConfigPanel {
     );
   }
 
-  private async handleEditModel(agentId: string) {
+  private async handleLoadConfig(configType: string, id: string) {
     try {
-      Logger.config('编辑模型配置，Agent ID:', agentId);
+      Logger.config(`加载配置，类型: ${configType} ID: ${id}`);
       
-      const config = this.modelConfigManager.getModelByName(agentId);
-      
-      Logger.config('当前配置:', config);
-      
-      this.panel.webview.postMessage({
-        type: 'loadConfig',
-        config: config || {}
-      });
+      if (configType === 'model') {
+        // 获取模型配置
+        const config = this.modelConfigManager.getModelByName(id);
+        
+        Logger.config(`当前模型配置: ${JSON.stringify(config)}`);
+        
+        this.panel.webview.postMessage({
+          type: 'loadConfig',
+          config: config || {}
+        });
+      } else if (configType === 'agent') {
+        // 获取 Agent 配置
+        const config = this.agentConfigManager.getAgentById(id);
+        
+        Logger.config(`当前 Agent 配置: ${JSON.stringify(config)}`);
+        
+        this.panel.webview.postMessage({
+          type: 'loadConfig',
+          config: config || {}
+        });
+      }
     } catch (error: any) {
-      Logger.error('获取模型配置失败', error);
+      Logger.error('获取配置失败', error);
       this.panel.webview.postMessage({
-        type: 'editModelResult',
+        type: 'configResult',
+        configType: 'load',
         success: false,
         error: error.message || '获取配置失败'
+      });
+    }
+  }
+
+  private async handleAddConfig(configType: string, config: any) {
+    try {
+      Logger.config(`添加配置，类型: ${configType} 配置: ${JSON.stringify(config)}`);
+      
+      if (configType === 'model') {
+        // 添加模型配置
+        const models = this.modelConfigManager.getModels();
+        models.push(config);
+        await this.modelConfigManager.updateModels(models);
+      } else if (configType === 'agent') {
+        // 使用 AgentConfigManager 的 addAgent 方法
+        await this.agentConfigManager.addAgent(config);
+      }
+      
+      this.panel.webview.postMessage({
+        type: 'configResult',
+        configType: 'add',
+        success: true
+      });
+    } catch (error: any) {
+      Logger.error('添加配置失败', error);
+      this.panel.webview.postMessage({
+        type: 'configResult',
+        configType: 'add',
+        success: false,
+        error: error.message || '添加配置失败'
+      });
+    }
+  }
+
+  private async handleChangeConfig(configType: string, config: any) {
+    try {
+      Logger.config(`修改配置，类型: ${configType} 配置: ${JSON.stringify(config)}`);
+      
+      if (configType === 'model') {
+        // 修改模型配置
+        const models = this.modelConfigManager.getModels();
+        const index = models.findIndex(m => m.id === config.id);
+        if (index !== -1) {
+          models[index] = config;
+          await this.modelConfigManager.updateModels(models);
+        }
+      } else if (configType === 'agent') {
+        // 修改 Agent 配置
+        await this.agentConfigManager.updateAgent(config.id, config);
+      }
+      
+      this.panel.webview.postMessage({
+        type: 'configResult',
+        configType: 'change',
+        success: true
+      });
+    } catch (error: any) {
+      Logger.error('修改配置失败', error);
+      this.panel.webview.postMessage({
+        type: 'configResult',
+        configType: 'change',
+        success: false,
+        error: error.message || '修改配置失败'
+      });
+    }
+  }
+
+  private async handleDeleteConfig(configType: string, id: string) {
+    try {
+      Logger.config(`删除配置，类型: ${configType} ID: ${id}`);
+      
+      if (configType === 'model') {
+        // 删除模型配置
+        const models = this.modelConfigManager.getModels();
+        const filteredModels = models.filter(m => m.id !== id);
+        await this.modelConfigManager.updateModels(filteredModels);
+      } else if (configType === 'agent') {
+        // 删除 Agent 配置
+        const agents = this.agentConfigManager.getAgents();
+        const filteredAgents = agents.filter(a => a.id !== id);
+        await this.agentConfigManager.updateAgents(filteredAgents);
+      }
+      
+      this.panel.webview.postMessage({
+        type: 'configResult',
+        configType: 'delete',
+        success: true
+      });
+    } catch (error: any) {
+      Logger.error('删除配置失败', error);
+      this.panel.webview.postMessage({
+        type: 'configResult',
+        configType: 'delete',
+        success: false,
+        error: error.message || '删除配置失败'
       });
     }
   }

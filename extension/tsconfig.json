@@ -1,6 +1,6 @@
 {
 	"compilerOptions": {
-		"module": "Node16",
+		"module": "CommonJS",
 		"target": "ES2022",
 		"outDir": "out",
 		"lib": [
@@ -9,14 +9,11 @@
 		"sourceMap": true,
 		"rootDir": "src",
 		"strict": true,
-		"moduleResolution": "Node16",
+		"moduleResolution": "Node",
 		"esModuleInterop": true,
 		"skipLibCheck": true,
 		"resolveJsonModule": true,
 		"allowSyntheticDefaultImports": true,
 		"removeComments": true
-	},
-	"exclude": [
-		"src/features/frontend/*"
-	]
+	}
 }

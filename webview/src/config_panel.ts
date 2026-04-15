@@ -82,8 +82,9 @@ declare function acquireVsCodeApi(): any;
     console.log('[ConfigPanel] 点击编辑模型按钮，当前 Agent:', currentEditingAgentId);
     
     vscode.postMessage({
-      type: 'editModel',
-      agentId: currentEditingAgentId
+      type: 'loadConfig',
+      configType: 'model',
+      id: currentEditingAgentId
     });
     
     editModelModal.style.display = 'block';
@@ -124,9 +125,9 @@ declare function acquireVsCodeApi(): any;
     console.log('[ConfigPanel] 保存配置:', config);
     
     vscode.postMessage({
-      type: 'saveModelConfig',
-      config: config,
-      agentId: currentEditingAgentId
+      type: 'changeConfig',
+      configType: 'model',
+      config: config
     });
   });
   
@@ -150,10 +151,44 @@ declare function acquireVsCodeApi(): any;
   });
   
   confirmAddAgent.addEventListener('click', () => {
-    const agentId = (newAgentId as HTMLInputElement).value.trim();
-    const agentName = (newAgentName as HTMLInputElement).value.trim();
-    const agentDesc = (newAgentDesc as HTMLInputElement).value.trim();
-    const agentPrompt = (newAgentPrompt as HTMLTextAreaElement).value.trim();
+    const agentIdInput = newAgentId as HTMLInputElement;
+    const agentNameInput = newAgentName as HTMLInputElement;
+    const agentDescInput = newAgentDesc as HTMLInputElement;
+    const agentPromptInput = newAgentPrompt as HTMLTextAreaElement;
+    
+    const agentId = agentIdInput.value.trim();
+    const agentName = agentNameInput.value.trim();
+    const agentDesc = agentDescInput.value.trim();
+    const agentPrompt = agentPromptInput.value.trim();
+    
+    // 1. 验证消息内容的完整性和格式正确性
+    if (!agentId) {
+      addAgentStatus.textContent = '❌ Agent ID 不能为空';
+      addAgentStatus.className = 'status error';
+      addAgentStatus.style.display = 'block';
+      return;
+    }
+    
+    if (!agentName) {
+      addAgentStatus.textContent = '❌ Agent 名称不能为空';
+      addAgentStatus.className = 'status error';
+      addAgentStatus.style.display = 'block';
+      return;
+    }
+    
+    if (!agentPrompt) {
+      addAgentStatus.textContent = '❌ Agent 系统提示词不能为空';
+      addAgentStatus.className = 'status error';
+      addAgentStatus.style.display = 'block';
+      return;
+    }
+    
+    // 4. 添加加载状态指示，防止重复提交
+    confirmAddAgent.disabled = true;
+    confirmAddAgent.textContent = '提交中...';
+    addAgentStatus.style.display = 'block';
+    addAgentStatus.textContent = '⏳ 正在提交，请稍候...';
+    addAgentStatus.className = 'status loading';
     
     const tools: string[] = [];
     document.querySelectorAll('.agent-tool:checked').forEach((el) => {
@@ -162,9 +197,11 @@ declare function acquireVsCodeApi(): any;
     
     console.log('[ConfigPanel] 新增 Agent:', { agentId, agentName, agentDesc, agentPrompt, tools });
     
+    // 2. 确保消息能够成功提交到后端服务
     vscode.postMessage({
-      type: 'addAgent',
-      agent: {
+      type: 'addConfig',
+      configType: 'agent',
+      config: {
         id: agentId,
         name: agentName,
         description: agentDesc,
@@ -172,6 +209,9 @@ declare function acquireVsCodeApi(): any;
         tools: tools
       }
     });
+    
+    // 5. 完成消息发送后正确关闭模态框并刷新相关数据列表
+    // 注意：实际的关闭和刷新逻辑在消息响应处理中
   });
 
   // 迁移配置按钮事件
@@ -244,16 +284,60 @@ declare function acquireVsCodeApi(): any;
       editStatus.style.display = 'block';
     }
     
-    if (message.type === 'editModelResult') {
-      editStatus.textContent = message.success ? '✅ 保存成功！' : '❌ 保存失败：' + message.error;
-      editStatus.className = 'status ' + (message.success ? 'success' : 'error');
-      editStatus.style.display = 'block';
-      
-      if (message.success) {
-        setTimeout(() => {
-          editModelModal.style.display = 'none';
-          editStatus.style.display = 'none';
-        }, 1000);
+    if (message.type === 'configResult') {
+      if (message.configType === 'add') {
+        if (message.success) {
+          addAgentStatus.textContent = '✅ Agent 添加成功！';
+          addAgentStatus.className = 'status success';
+          addAgentStatus.style.display = 'block';
+          
+          setTimeout(() => {
+            addAgentModal.style.display = 'none';
+            addAgentStatus.style.display = 'none';
+            (newAgentId as HTMLInputElement).value = '';
+            (newAgentName as HTMLInputElement).value = '';
+            (newAgentDesc as HTMLInputElement).value = '';
+            (newAgentPrompt as HTMLTextAreaElement).value = '';
+          }, 1000);
+        } else {
+          addAgentStatus.textContent = `❌ 添加失败：${message.error || '未知错误'}`;
+          addAgentStatus.className = 'status error';
+          addAgentStatus.style.display = 'block';
+          
+          // 恢复按钮状态
+          confirmAddAgent.disabled = false;
+          confirmAddAgent.textContent = '确定';
+        }
+      } else if (message.configType === 'change') {
+        if (message.success) {
+          editStatus.textContent = '✅ 保存成功！';
+          editStatus.className = 'status success';
+          editStatus.style.display = 'block';
+          
+          setTimeout(() => {
+            editModelModal.style.display = 'none';
+            editStatus.style.display = 'none';
+          }, 1000);
+        } else {
+          editStatus.textContent = `❌ 保存失败：${message.error || '未知错误'}`;
+          editStatus.className = 'status error';
+          editStatus.style.display = 'block';
+        }
+      } else if (message.configType === 'delete') {
+        if (message.success) {
+          editStatus.textContent = '✅ 删除成功！';
+          editStatus.className = 'status success';
+          editStatus.style.display = 'block';
+          
+          setTimeout(() => {
+            editModelModal.style.display = 'none';
+            editStatus.style.display = 'none';
+          }, 1000);
+        } else {
+          editStatus.textContent = `❌ 删除失败：${message.error || '未知错误'}`;
+          editStatus.className = 'status error';
+          editStatus.style.display = 'block';
+        }
       }
     }
     
@@ -267,23 +351,6 @@ declare function acquireVsCodeApi(): any;
         editStatus.textContent = '❌ 获取模型列表失败：' + (message.error || '未知错误');
         editStatus.className = 'status error';
         editStatus.style.display = 'block';
-      }
-    }
-    
-    if (message.type === 'addAgentResult') {
-      addAgentStatus.textContent = message.success ? '✅ Agent 添加成功！' : '❌ 添加失败：' + message.error;
-      addAgentStatus.className = 'status ' + (message.success ? 'success' : 'error');
-      addAgentStatus.style.display = 'block';
-      
-      if (message.success) {
-        setTimeout(() => {
-          addAgentModal.style.display = 'none';
-          addAgentStatus.style.display = 'none';
-          (newAgentId as HTMLInputElement).value = '';
-          (newAgentName as HTMLInputElement).value = '';
-          (newAgentDesc as HTMLInputElement).value = '';
-          (newAgentPrompt as HTMLTextAreaElement).value = '';
-        }, 1000);
       }
     }
     

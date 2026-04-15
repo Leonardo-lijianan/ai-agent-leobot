@@ -1,6 +1,6 @@
 import * as fs from 'fs';
 import * as path from 'path';
-import { Logger } from '../utils/Logger.js';
+import { Logger } from './Logger.js';
 
 /**
  * 配置迁移工具

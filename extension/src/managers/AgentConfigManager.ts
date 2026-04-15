@@ -4,6 +4,7 @@ import * as path from 'path';
 import { Logger } from '../utils/Logger.js';
 import { ModelConfigManager } from './ModelConfigManager.js';
 import { AgentConfig, AgentConfigFile } from '../types.js';
+import { getMarkdownForWebview } from '../utils/loadMedia.js';
 
 const CONFIG_FILE_NAME = 'agentConfig.json';
 
@@ -28,13 +29,14 @@ export class AgentConfigManager {
    * 从 media/system_prompt.md 读取
    */
   public getDefaultSystemPrompt(): string {
-    // 扩展路径
-    const extensionPath = this._context ? this._context.extensionPath : __dirname;
-    const promptPath = path.join(extensionPath, 'media', 'system_prompt.md');
-    
-    if (!fs.existsSync(promptPath)) {
+    try {
+      // 扩展路径
+      const extensionPath = this._context ? this._context.extensionPath : __dirname;
+      return getMarkdownForWebview(extensionPath, 'system_prompt.md');
+    } catch (error: any) {
+      Logger.error('读取系统提示词文件失败', error);
       throw new Error(
-        `系统提示词文件不存在：${promptPath}\n` +
+        `系统提示词文件读取失败：${error.message}\n` +
         `可能原因：\n` +
         `1. 插件安装不完整\n` +
         `2. media/system_prompt.md 文件丢失\n\n` +
@@ -43,8 +45,6 @@ export class AgentConfigManager {
         `- 或联系开发者获取完整版本`
       );
     }
-    
-    return fs.readFileSync(promptPath, 'utf-8');
   }
 
   setContext(context: vscode.ExtensionContext) {

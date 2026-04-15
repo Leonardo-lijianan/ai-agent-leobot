@@ -1,10 +1,6 @@
 import esbuild from 'esbuild';
-import { execSync } from 'child_process';
-import { existsSync, mkdirSync, cpSync, readFileSync, writeFileSync } from 'fs';
-import { join } from 'path';
 
 const production = process.argv.includes('--production');
-const watch = process.argv.includes('--watch');
 
 // 添加时间戳
 function log(message) {
@@ -20,21 +16,35 @@ function error(message) {
 async function main() {
   log('[esbuild] 开始构建...');
   
-  // 1. 先编译前端代码
-  log('[esbuild] 编译前端代码...');
-  try {
-    execSync('npx tsc -p tsconfig.frontend.json', { stdio: 'inherit' });
-    log('[esbuild] 前端代码编译完成');
-  } catch (error) {
-    error('[esbuild] 前端代码编译失败:', error.message);
-    process.exit(1);
-  }
+  // 1. 编译前端代码
+  const frontendCtx = await esbuild.context({
+    entryPoints: ['webview/src/*.ts'],
+    bundle: false,
+    format: 'cjs',
+    minify: production,
+    minifyWhitespace: production,
+    minifyIdentifiers: production,
+    minifySyntax: production,
+    keepNames: false,
+    sourcemap: !production,
+    sourcesContent: false,
+    platform: 'browser',
+    target: 'es2020',
+    outdir: 'dist/webview/media/script',
+    logLevel: 'warning',
+    tsconfig: 'webview/tsconfig.json',
+    plugins: [
+      esbuildProblemMatcherPlugin
+    ]
+  });
   
-  // 2. 前端脚本已经由 ConfigPanel 处理，不需要额外操作
+  // 打包前端代码
+  await frontendCtx.rebuild();
+  await frontendCtx.dispose();
   
-  // 3. 后端扩展代码 - 打包到 dist/
+  // 3. 后端扩展代码 - 打包到 extension/dist/
   const backendCtx = await esbuild.context({
-    entryPoints: ['src/extension.ts'],
+    entryPoints: ['extension/src/extension.ts'],
     bundle: true,
     format: 'cjs',
     minify: production,
@@ -49,17 +59,15 @@ async function main() {
     outfile: 'dist/extension.cjs',
     external: ['vscode'],
     logLevel: 'warning',
+    tsconfig: 'extension/tsconfig.json',
     plugins: [
       esbuildProblemMatcherPlugin
     ]
   });
   
-  if (watch) {
-    await backendCtx.watch();
-  } else {
-    await backendCtx.rebuild();
-    await backendCtx.dispose();
-  }
+  // 打包后端代码
+  await backendCtx.rebuild();
+  await backendCtx.dispose();
   
   log('[esbuild] 构建完成！');
 }

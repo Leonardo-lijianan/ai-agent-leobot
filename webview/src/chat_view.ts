@@ -1,10 +1,20 @@
+declare function acquireVsCodeApi(): any;
+
+// 扩展 Window 接口
+declare interface Window {
+  markdownit: any;
+  markdownitFootnote: any;
+  markdownitTaskLists: any;
+  DOMPurify: any;
+}
+
 (function() {
   const vscode = acquireVsCodeApi();
   let testMarkdownText = ''; // Initialize empty test markdown text
   
   let isLoading = false;
   let currentAgentMode = true;
-  let md = null;
+  let md: any = null;
   let isMarkdownInitialized = false;
   
   // 初始化 markdown-it
@@ -46,16 +56,16 @@
     }
   }, 100);
   
-  function escapeHtml(text) {
+  function escapeHtml(text: string): string {
     const div = document.createElement('div');
     div.textContent = text;
     return div.innerHTML;
   }
   
-  function addMessage(message) {
+  function addMessage(message: { role: string; content: string }) {
     const chatContainer = document.getElementById('chatContainer');
-    const chatContent = chatContainer.querySelector('.chat-content');
-    const existingWelcome = chatContent.querySelector('.welcome');
+    const chatContent = chatContainer?.querySelector('.chat-content');
+    const existingWelcome = chatContent?.querySelector('.welcome');
     if (existingWelcome) {
       existingWelcome.remove();
     }
@@ -73,55 +83,67 @@
     roleDiv.className = 'message-role';
     roleDiv.textContent = roleText;
     
-    let contentHtml;
+    let contentHtml: string;
     if (message.role === 'user') {
       contentHtml = escapeHtml(message.content);
     } else {
       if (md) {
-        const markdownHtml = md.render(message.content);
-        contentHtml = typeof DOMPurify !== 'undefined' ? 
-          DOMPurify.sanitize(markdownHtml) : escapeHtml(message.content);
-      } else {
-        contentHtml = escapeHtml(message.content);
-      }
+      const markdownHtml = md.render(message.content);
+      contentHtml = typeof window.DOMPurify !== 'undefined' ? 
+        window.DOMPurify.sanitize(markdownHtml) : escapeHtml(message.content);
+    } else {
+      contentHtml = escapeHtml(message.content);
+    }
     }
     
     messageDiv.innerHTML = '<div class="message-content">' + contentHtml + '</div>';
     
     wrapperDiv.appendChild(roleDiv);
     wrapperDiv.appendChild(messageDiv);
-    chatContent.appendChild(wrapperDiv);
-    chatContent.scrollTop = chatContent.scrollHeight;
+    chatContent?.appendChild(wrapperDiv);
+    if (chatContent) {
+      chatContent.scrollTop = chatContent.scrollHeight;
+    }
   }
   
   function clearMessages() {
     const chatContainer = document.getElementById('chatContainer');
-    const chatContent = chatContainer.querySelector('.chat-content');
-    chatContent.innerHTML = '';
+    const chatContent = chatContainer?.querySelector('.chat-content');
+    if (chatContent) {
+      chatContent.innerHTML = '';
+    }
   }
   
-  function setLoading(loading) {
+  function setLoading(loading: boolean) {
     isLoading = loading;
     const sendButton = document.getElementById('sendButton');
     const messageInput = document.getElementById('messageInput');
-    sendButton.disabled = loading;
-    messageInput.disabled = loading;
+    if (sendButton) {
+      (sendButton as HTMLButtonElement).disabled = loading;
+    }
+    if (messageInput) {
+      (messageInput as HTMLTextAreaElement).disabled = loading;
+    }
     
-    if (loading) {
-      sendButton.innerHTML = '<span class="loading"></span>';
-    } else {
-      sendButton.textContent = '发送';
+    if (sendButton) {
+      if (loading) {
+        sendButton.innerHTML = '<span class="loading"></span>';
+      } else {
+        sendButton.textContent = '发送';
+      }
     }
   }
   
   function sendMessage() {
     const messageInput = document.getElementById('messageInput');
-    const content = messageInput.value.trim();
+    if (!messageInput) return;
+    
+    const content = (messageInput as HTMLTextAreaElement).value.trim();
     if (!content || isLoading) return;
     
     addMessage({ role: 'user', content: content });
     vscode.postMessage({ type: 'send', content });
-    messageInput.value = '';
+    (messageInput as HTMLTextAreaElement).value = '';
     setLoading(true);
   }
   
@@ -131,21 +153,25 @@
     const messageInput = document.getElementById('messageInput');
     const testMarkdownBtn = document.getElementById('testMarkdownBtn');
     const configBtn = document.getElementById('configBtn');
-    const modeSelect = document.getElementById('modeSelect');
-    const agentSelect = document.getElementById('agentSelect');
-    const modelSelect = document.getElementById('modelSelect');
+    const modeSelect = document.getElementById('modeSelect') as HTMLSelectElement | null;
+    const agentSelect = document.getElementById('agentSelect') as HTMLSelectElement | null;
+    const modelSelect = document.getElementById('modelSelect') as HTMLSelectElement | null;
     const agentSelectorGroup = document.getElementById('agentSelectorGroup');
     const currentModelEl = document.getElementById('currentModel');
     
     // 发送按钮
-    sendButton.addEventListener('click', sendMessage);
+    if (sendButton) {
+      sendButton.addEventListener('click', sendMessage);
+    }
     
     // Ctrl+Enter 发送
-    messageInput.addEventListener('keydown', (e) => {
-      if (e.ctrlKey && e.key === 'Enter') {
-        sendMessage();
-      }
-    });
+    if (messageInput) {
+      messageInput.addEventListener('keydown', (e) => {
+        if (e.ctrlKey && e.key === 'Enter') {
+          sendMessage();
+        }
+      });
+    }
     
     // 测试 Markdown
     if (testMarkdownBtn) {
@@ -164,13 +190,15 @@
     // 模式切换
     if (modeSelect) {
       modeSelect.addEventListener('change', (e) => {
-        const agentMode = e.target.value === 'agent';
+        const agentMode = (e.target as HTMLSelectElement).value === 'agent';
         currentAgentMode = agentMode;
         
-        if (agentMode) {
-          agentSelectorGroup.classList.add('visible');
-        } else {
-          agentSelectorGroup.classList.remove('visible');
+        if (agentSelectorGroup) {
+          if (agentMode) {
+            agentSelectorGroup.classList.add('visible');
+          } else {
+            agentSelectorGroup.classList.remove('visible');
+          }
         }
         
         vscode.postMessage({ type: 'toggleAgentMode', enabled: agentMode });
@@ -180,14 +208,14 @@
     // Agent 选择器
     if (agentSelect) {
       agentSelect.addEventListener('change', (e) => {
-        vscode.postMessage({ type: 'switchAgent', agentId: e.target.value });
+        vscode.postMessage({ type: 'switchAgent', agentId: (e.target as HTMLSelectElement).value });
       });
     }
     
     // Model 选择器
     if (modelSelect) {
       modelSelect.addEventListener('change', (e) => {
-        vscode.postMessage({ type: 'switchModel', modelId: e.target.value });
+        vscode.postMessage({ type: 'switchModel', modelId: (e.target as HTMLSelectElement).value });
       });
     }
     
@@ -210,7 +238,7 @@
           break;
         case 'history':
           clearMessages();
-          message.messages.forEach(msg => addMessage(msg));
+          message.messages.forEach((msg: any) => addMessage(msg));
           break;
         case 'clear':
           clearMessages();
@@ -222,18 +250,22 @@
             const agentMode = message.model.agentMode;
             const agentName = message.model.agentName || '默认助手';
             
-            currentModelEl.textContent = modelName + (provider ? ' (' + provider + ')' : '');
-            currentModelEl.style.color = 'var(--vscode-foreground)';
+            if (currentModelEl) {
+              currentModelEl.textContent = modelName + (provider ? ' (' + provider + ')' : '');
+              currentModelEl.style.color = 'var(--vscode-foreground)';
+            }
             
             if (modeSelect) {
               modeSelect.value = agentMode ? 'agent' : 'direct';
               currentAgentMode = agentMode;
               
               // 根据模式显示/隐藏 Agent 选择器
-              if (agentMode) {
-                agentSelectorGroup.classList.add('visible');
-              } else {
-                agentSelectorGroup.classList.remove('visible');
+              if (agentSelectorGroup) {
+                if (agentMode) {
+                  agentSelectorGroup.classList.add('visible');
+                } else {
+                  agentSelectorGroup.classList.remove('visible');
+                }
               }
             }
             
@@ -253,10 +285,12 @@
               currentAgentMode = config.agentModeEnabled;
               
               // 根据模式显示/隐藏 Agent 选择器
-              if (config.agentModeEnabled) {
-                agentSelectorGroup.classList.add('visible');
-              } else {
-                agentSelectorGroup.classList.remove('visible');
+              if (agentSelectorGroup) {
+                if (config.agentModeEnabled) {
+                  agentSelectorGroup.classList.add('visible');
+                } else {
+                  agentSelectorGroup.classList.remove('visible');
+                }
               }
             }
             
@@ -272,18 +306,26 @@
         case 'agentList':
           if (message.agents && Array.isArray(message.agents)) {
             if (agentSelect) {
-              agentSelect.innerHTML = message.agents.map(agent => 
-                '<option value="' + agent.id + '">' + agent.name + '</option>'
-              ).join('');
+              agentSelect.innerHTML = '';
+              message.agents.forEach((agent: any) => {
+                const option = document.createElement('option');
+                option.value = agent.id;
+                option.textContent = agent.name || agent.id;
+                agentSelect.appendChild(option);
+              });
             }
           }
           break;
         case 'modelList':
           if (message.models && Array.isArray(message.models)) {
             if (modelSelect) {
-              modelSelect.innerHTML = message.models.map(model => 
-                '<option value="' + model.name + '">' + model.name + (model.modelId ? ' (' + model.modelId + ')' : '') + '</option>'
-              ).join('');
+              modelSelect.innerHTML = '';
+              message.models.forEach((model: any) => {
+                const option = document.createElement('option');
+                option.value = model.name;
+                option.textContent = model.name + (model.modelId ? ' (' + model.modelId + ')' : '');
+                modelSelect.appendChild(option);
+              });
             }
           }
           break;

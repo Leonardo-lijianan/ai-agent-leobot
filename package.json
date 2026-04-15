@@ -5,7 +5,7 @@
   "version": "0.0.3",
   "publisher": "leo",
   "license": "AGPL-3.0",
-  "type": "module",
+  "type": "commonjs",
   "repository": {
     "type": "git",
     "url": "https://github.com/leo/ai-agent-leobot"
@@ -27,7 +27,7 @@
     "OpenAI",
     "硅基流动"
   ],
-  "main": "./dist/extension.cjs",
+  "main": "./extension/out/extension.js",
   "contributes": {
     "viewsContainers": {
       "activitybar": [
@@ -125,15 +125,15 @@
   "scripts": {
     "vscode:prepublish": "npm run compile:frontend && npm run compile:backend && node esbuild.js --production",
     "compile": "npm run compile:frontend && npm run compile:backend",
-    "compile:backend": "tsc -p ./",
-    "compile:frontend": "tsc -p tsconfig.frontend.json",
+    "compile:backend": "tsc -p extension/tsconfig.json",
+    "compile:frontend": "tsc -p webview/tsconfig.json",
     "compile:all": "npm run compile:frontend && npm run compile:backend",
     "watch": "npm-run-all -p watch:backend watch:frontend",
-    "watch:backend": "tsc -watch -p ./",
-    "watch:frontend": "tsc -watch -p tsconfig.frontend.json",
+    "watch:backend": "tsc -watch -p extension/tsconfig.json",
+    "watch:frontend": "tsc -watch -p webview/tsconfig.json",
     "watch:esbuild": "node esbuild.js --watch",
     "pretest": "npm run compile && npm run lint",
-    "lint": "eslint src",
+    "lint": "eslint extension/src",
     "test": "vscode-test",
     "package": "vsce package",
     "bundle": "node esbuild.js",
@@ -159,6 +159,7 @@
     "esbuild": "^0.28.0",
     "eslint": "^9.39.3",
     "npm-run-all": "^4.1.5",
+    "prettier": "3.8.3",
     "typescript": "^5.9.3",
     "typescript-eslint": "^8.56.1"
   }

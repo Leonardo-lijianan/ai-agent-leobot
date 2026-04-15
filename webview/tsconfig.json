@@ -2,20 +2,14 @@
   "compilerOptions": {
     "module": "None",
     "target": "ES2022",
+    "rootDir": "src",
     "outDir": "media/script",
     "lib": ["ES2022", "DOM"],
     "types": [],
     "skipLibCheck": true,
-    
     "sourceMap": false,
 		"esModuleInterop": true,
     "removeComments": true
 
-  },
-  "include": [
-    "src/features/frontend/*.ts"
-  ],
-  "exclude": [
-    "node_modules"
-  ]
+  }
 }

@@ -1,3 +1,10 @@
+export interface ModelAdapter {
+  modelId: string;
+  protocolType: 'openai' | 'anthropic' | 'ollama' | 'gemini' | 'custom';
+  chat(messages: Message[], model?: string, tools?: boolean): Promise<string>;
+  stream?(messages: Message[], model?: string): AsyncIterable<string>;
+}
+
 export interface ModelConfig {
   id: string;
   protocolType: 'openai' | 'anthropic' | 'ollama' | 'gemini' | 'custom';
@@ -6,12 +13,7 @@ export interface ModelConfig {
   modelId?: string;
 }
 
-export interface ModelAdapter {
-  modelId: string;
-  protocolType: 'openai' | 'anthropic' | 'ollama' | 'gemini' | 'custom';
-  chat(messages: Message[], model?: string, tools?: boolean): Promise<string>;
-  stream?(messages: Message[], model?: string): AsyncIterable<string>;
-}
+
 
 export interface SkillConfig {
   name: string;
@@ -52,13 +54,6 @@ export interface AgentConfigFile {
   agents: AgentConfig[];
   defaultAgent: string;
 }
-
-// export interface PluginConfig {
-//   models: ModelConfig[];
-//   skills: SkillConfig[];
-//   agents: AgentConfig[];
-//   defaultModel: string;
-// }
 
 export interface Message {
   role: 'system' | 'user' | 'assistant';

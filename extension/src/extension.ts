@@ -1,5 +1,5 @@
 import * as vscode from 'vscode';
-import { ChatViewProvider } from './features/ChatView.js';
+import { ChatViewProvider } from './features/ChatViewProvider.js';
 import { ConfigManager } from './configManager.js';
 import { ModelConfigManager } from './managers/ModelConfigManager.js';
 import { AgentConfigManager } from './managers/AgentConfigManager.js';
@@ -71,7 +71,8 @@ export function activate(context: vscode.ExtensionContext) {
   // 注册 Webview 提供者
   context.subscriptions.push(
     vscode.window.registerWebviewViewProvider(
-      ChatViewProvider.viewType,
+      // ChatViewProvider.viewType,
+      'ai-agent-leobot-chat',
       chatViewProvider
     )
   );
@@ -148,12 +149,7 @@ async function createConfigPanel(
     }
   );
   
-  const path = await import('path');
-  const htmlPath = vscode.Uri.file(
-    path.join(context.extensionPath, 'media', 'configPanel.html')
-  );
-  
-  const configPanel = new ConfigPanel(panel, modelConfigManager, agentConfigManager, context, htmlPath);
+  const configPanel = new ConfigPanel(panel, modelConfigManager, agentConfigManager, context);
   configPanel.loadConfig();
   
   panel.onDidDispose(
