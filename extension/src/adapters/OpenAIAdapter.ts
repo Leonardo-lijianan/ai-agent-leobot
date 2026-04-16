@@ -1,4 +1,4 @@
-import { Message, ModelConfig, ModelAdapter } from "../types";
+import { Message, ModelConfig, ModelAdapter } from "../types/shared_T.js";
 import { Logger } from "../utils/Logger";
 import { ToolRegistry } from "../tools/ToolRegistry.js";
 

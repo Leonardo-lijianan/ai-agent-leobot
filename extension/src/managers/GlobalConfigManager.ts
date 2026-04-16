@@ -1,10 +1,10 @@
-import * as vscode from 'vscode';
-import * as fs from 'fs';
-import * as path from 'path';
-import { Logger } from '../utils/Logger.js';
-import { AgentModelConfig } from '../types.js';
+import * as vscode from "vscode";
+import * as fs from "fs";
+import * as path from "path";
+import { Logger } from "../utils/Logger.js";
+import { GlobalConfigFile } from "../types/shared_T.js";
 
-const CONFIG_FILE_NAME = 'globalConfig.json';
+const CONFIG_FILE_NAME = "globalConfig.json";
 
 /**
  * 全局运行时配置管理器
@@ -12,11 +12,11 @@ const CONFIG_FILE_NAME = 'globalConfig.json';
  */
 export class GlobalConfigManager {
   private static instance: GlobalConfigManager;
-  private configPath: string = '';
+  private configPath: string = "";
   private _context?: vscode.ExtensionContext;
   private _onDidChangeConfig = new vscode.EventEmitter<void>();
   public readonly onDidChangeConfig = this._onDidChangeConfig.event;
-  
+
   private constructor() {}
 
   static getInstance(): GlobalConfigManager {
@@ -30,7 +30,7 @@ export class GlobalConfigManager {
     this._context = context;
     // 使用 VS Code 的全局存储目录
     this.configPath = path.join(context.globalStorageUri.fsPath, CONFIG_FILE_NAME);
-    Logger.config('GlobalConfigManager 初始化', { configPath: this.configPath });
+    Logger.config("GlobalConfigManager 初始化", { configPath: this.configPath });
   }
 
   getContext(): vscode.ExtensionContext | undefined {
@@ -39,39 +39,38 @@ export class GlobalConfigManager {
 
   private ensureConfigFile(): void {
     const configDir = path.dirname(this.configPath);
-    
+
     if (!fs.existsSync(configDir)) {
       fs.mkdirSync(configDir, { recursive: true });
     }
-    
+
     if (!fs.existsSync(this.configPath)) {
-        const defaultConfig: GlobalConfigFile = {
-          currentAgent: 'default',
-          agentModels: [],
-          agentModeEnabled: true
-        };
-      
-      fs.writeFileSync(this.configPath, JSON.stringify(defaultConfig, null, 2), 'utf-8');
-      Logger.config('创建默认全局配置文件', { path: this.configPath });
+      const defaultConfig: GlobalConfigFile = {
+        currentAgent: "default",
+        agentModeEnabled: true,
+      };
+
+      fs.writeFileSync(this.configPath, JSON.stringify(defaultConfig, null, 2), "utf-8");
+      Logger.config("创建默认全局配置文件", { path: this.configPath });
     }
   }
 
   private readConfig(): GlobalConfigFile {
     this.ensureConfigFile();
-    
+
     try {
-      const content = fs.readFileSync(this.configPath, 'utf-8');
+      const content = fs.readFileSync(this.configPath, "utf-8");
       return JSON.parse(content);
     } catch (error: any) {
-      Logger.error('读取全局配置文件失败', error);
+      Logger.error("读取全局配置文件失败", error);
       Logger.errorAndThrow(`配置文件损坏：${error.message}`);
     }
   }
 
   private writeConfig(config: GlobalConfigFile): void {
     try {
-      fs.writeFileSync(this.configPath, JSON.stringify(config, null, 2), 'utf-8');
-      Logger.config('保存全局配置文件', { path: this.configPath });
+      fs.writeFileSync(this.configPath, JSON.stringify(config, null, 2), "utf-8");
+      Logger.config("保存全局配置文件", { path: this.configPath });
     } catch (error: any) {
       Logger.errorAndThrow(`无法保存全局配置文件：${error.message}`);
     }
@@ -82,7 +81,7 @@ export class GlobalConfigManager {
    */
   getCurrentAgent(): string {
     const config = this.readConfig();
-    return config.currentAgent || 'default';
+    return config.currentAgent || "default";
   }
 
   /**
@@ -96,19 +95,10 @@ export class GlobalConfigManager {
   }
 
   /**
-   * 获取 Agent 与模型的关联配置
-   */
-  getAgentModels(): AgentModelConfig[] {
-    const config = this.readConfig();
-    return config.agentModels || [];
-  }
-
-  /**
    * 设置 Agent 与模型的关联配置
    */
-  async setAgentModels(agentModels: AgentModelConfig[]): Promise<void> {
+  async setAgentModels(agentModels: { id: string; modelConfigId: string }[]): Promise<void> {
     const config = this.readConfig();
-    config.agentModels = agentModels;
     this.writeConfig(config);
     this._onDidChangeConfig.fire();
   }
@@ -134,27 +124,13 @@ export class GlobalConfigManager {
   /**
    * 获取完整的运行时配置
    */
-  getRuntimeConfig(): {
-    currentAgent: string;
-    agentModels: AgentModelConfig[];
-    agentModeEnabled: boolean;
-  } {
+  getRuntimeConfig(): GlobalConfigFile {
     const config = this.readConfig();
     return {
-      currentAgent: config.currentAgent || 'default',
-      agentModels: config.agentModels || [],
-      agentModeEnabled: config.agentModeEnabled !== false
+      currentAgent: config.currentAgent || "default",
+      agentModeEnabled: config.agentModeEnabled !== false,
     };
   }
-}
-
-/**
- * 全局配置文件接口
- */
-interface GlobalConfigFile {
-  currentAgent: string;
-  agentModels: AgentModelConfig[];
-  agentModeEnabled?: boolean;
 }
 
 // 导出单例

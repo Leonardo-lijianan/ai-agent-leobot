@@ -1,5 +1,5 @@
 import * as vscode from 'vscode';
-import { ModelConfig } from './types.js';
+import { ModelConfig } from './types/shared_T.js';
 import { agentManager } from './managers/AgentManager.js';
 
 const CONFIG_KEY = 'aiAgentLeoBot';

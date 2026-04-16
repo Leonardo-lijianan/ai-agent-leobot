@@ -5,11 +5,8 @@
     "rootDir": "src",
     "outDir": "media/script",
     "lib": ["ES2022", "DOM"],
-    "types": [],
     "skipLibCheck": true,
     "sourceMap": false,
-		"esModuleInterop": true,
     "removeComments": true
-
   }
 }

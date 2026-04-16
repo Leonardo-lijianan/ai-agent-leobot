@@ -1,6 +1,6 @@
 import { GoogleGenAI } from "@google/genai";
 import { Logger } from "../utils/Logger";
-import { Message, ModelConfig, ModelAdapter } from "../types";
+import { Message, ModelConfig, ModelAdapter } from "../types/shared_T.js";
 
 export class GeminiAdapter implements ModelAdapter {
   modelId: string;

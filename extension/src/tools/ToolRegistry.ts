@@ -1,9 +1,9 @@
-import { Skill, Tool, MCPTool } from '../types.js';
-import { Logger } from '../utils/Logger.js';
+import { Skill, Tool, MCPTool } from "../types/shared_T.js";
+import { Logger } from "../utils/Logger.js";
 
 /**
  * 工具注册表
- * 
+ *
  * 职责：
  * - 注册所有 MCP 工具和 Skill
  * - 统一暴露给 LLM
@@ -12,9 +12,9 @@ import { Logger } from '../utils/Logger.js';
 export class ToolRegistry {
   private static instance: ToolRegistry;
   private tools: Map<string, Tool> = new Map();
-  
+
   private constructor() {}
-  
+
   /**
    * 获取单例实例
    */
@@ -24,7 +24,7 @@ export class ToolRegistry {
     }
     return ToolRegistry.instance;
   }
-  
+
   /**
    * 注册 MCP 工具
    */
@@ -35,13 +35,13 @@ export class ToolRegistry {
         description: tool.description,
         inputSchema: tool.inputSchema,
         execute: (args) => tool.handler(args),
-        source: 'mcp'
+        source: "mcp",
       };
       this.tools.set(tool.name, wrappedTool);
-      Logger.debug('注册 MCP 工具', { name: tool.name });
+      Logger.debug("注册 MCP 工具", { name: tool.name });
     }
   }
-  
+
   /**
    * 注册 Skill
    */
@@ -52,20 +52,20 @@ export class ToolRegistry {
         description: skill.description,
         inputSchema: skill.inputSchema,
         execute: (args) => skill.execute(args),
-        source: 'skill'
+        source: "skill",
       };
       this.tools.set(skill.name, wrappedTool);
-      Logger.debug('注册 Skill', { name: skill.name, source: 'skill' });
+      Logger.debug("注册 Skill", { name: skill.name, source: "skill" });
     }
   }
-  
+
   /**
    * 获取所有工具（给 LLM 用）
    */
   listTools(): Tool[] {
     return Array.from(this.tools.values());
   }
-  
+
   /**
    * 执行工具
    */
@@ -74,13 +74,13 @@ export class ToolRegistry {
     if (!tool) {
       Logger.errorAndThrow(`工具不存在：${name}`);
     }
-    
-    Logger.info('执行工具', { 
-      name, 
+
+    Logger.info("执行工具", {
+      name,
       source: tool.source,
-      args: JSON.stringify(args).substring(0, 100) 
+      args: JSON.stringify(args).substring(0, 100),
     });
-    
+
     return tool.execute(args);
   }
 }

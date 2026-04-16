@@ -1,30 +1,35 @@
-import * as vscode from 'vscode';
-import { Logger } from '../utils/Logger.js';
-import { Skill } from '../types.js';
+import * as vscode from "vscode";
+import { Logger } from "../utils/Logger.js";
+import { Skill } from "../types/shared_T.js";
 
 /**
  * 获取当前活动编辑器文件信息的 Skill
- * 
+ *
  * 注意：这是 VS Code 特定的功能，MCP 工具无法替代
  * MCP 工具提供通用的文件操作（read_file, write_file 等）
  * 但无法访问 VS Code 的编辑器状态
  */
 export class GetActiveFileSkill implements Skill {
-  name = 'get-active-file';
-  description = '获取当前活动编辑器的文件信息';
+  name = "get-active-file";
+  description = "获取当前活动编辑器的文件信息";
   inputSchema: {
-    type: 'object';
+    type: "object";
     properties: {};
     required: string[];
   } = {
-    type: 'object' as const,
+    type: "object" as const,
     properties: {},
-    required: []
+    required: [],
   };
 
-  async execute(): Promise<{ filePath: string; content: string; language: string; selectedText: string } | null> {
+  async execute(): Promise<{
+    filePath: string;
+    content: string;
+    language: string;
+    selectedText: string;
+  } | null> {
     const editor = vscode.window.activeTextEditor;
-    
+
     if (!editor) {
       return null;
     }
@@ -32,13 +37,13 @@ export class GetActiveFileSkill implements Skill {
     const document = editor.document;
     const content = document.getText();
     const selection = editor.selection;
-    const selectedText = selection.isEmpty ? '' : document.getText(selection);
+    const selectedText = selection.isEmpty ? "" : document.getText(selection);
 
     return {
       filePath: document.fileName,
       content,
       language: document.languageId,
-      selectedText
+      selectedText,
     };
   }
 }
@@ -85,7 +90,7 @@ export class SkillManager {
 
   async executeSkill(name: string, input: any): Promise<any> {
     const skill = this.get(name);
-    
+
     if (!skill) {
       Logger.errorAndThrow(`Skill 不存在：${name}`);
     }

@@ -1,4 +1,4 @@
-import { ModelConfig, ModelAdapter } from "../types.js";
+import { ModelConfig, ModelAdapter } from "../types/shared_T.js";
 import { Logger } from "../utils/Logger.js";
 import { GeminiAdapter } from "./GeminiAdapter.js";
 import { OpenAIAdapter } from "./OpenAIAdapter.js";

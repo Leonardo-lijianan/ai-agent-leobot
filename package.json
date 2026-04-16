@@ -2,7 +2,7 @@
   "name": "ai-agent-leobot",
   "displayName": "AI Agent LeoBot",
   "description": "本地 AI Agent 运行时，支持多模型编排和自定义 Skills",
-  "version": "0.0.3",
+  "version": "1.0.0",
   "publisher": "leo",
   "license": "AGPL-3.0",
   "type": "commonjs",
@@ -27,7 +27,7 @@
     "OpenAI",
     "硅基流动"
   ],
-  "main": "./extension/out/extension.js",
+  "main": "./dist/extension.cjs",
   "contributes": {
     "viewsContainers": {
       "activitybar": [
@@ -123,21 +123,14 @@
     }
   },
   "scripts": {
-    "vscode:prepublish": "npm run compile:frontend && npm run compile:backend && node esbuild.js --production",
-    "compile": "npm run compile:frontend && npm run compile:backend",
-    "compile:backend": "tsc -p extension/tsconfig.json",
-    "compile:frontend": "tsc -p webview/tsconfig.json",
-    "compile:all": "npm run compile:frontend && npm run compile:backend",
-    "watch": "npm-run-all -p watch:backend watch:frontend",
-    "watch:backend": "tsc -watch -p extension/tsconfig.json",
-    "watch:frontend": "tsc -watch -p webview/tsconfig.json",
-    "watch:esbuild": "node esbuild.js --watch",
-    "pretest": "npm run compile && npm run lint",
+    "vscode:prepublish": "npm run build",
+    "compile": "npm run build",
+    "build": "node esbuild.js",
+    "watch": "node esbuild.js --watch",
+    "pretest": "npm run build && npm run lint",
     "lint": "eslint extension/src",
     "test": "vscode-test",
-    "package": "vsce package",
-    "bundle": "node esbuild.js",
-    "bundle:production": "node esbuild.js --production"
+    "package": "npm run build && vsce package"
   },
   "vsce": {
     "dependencies": false

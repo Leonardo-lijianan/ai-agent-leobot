@@ -1,8 +1,7 @@
-import * as vscode from 'vscode';
-import { Logger } from '../utils/Logger.js';
-import { AgentConfigManager } from './AgentConfigManager.js';
-import { AgentConfig } from '../types.js'
-
+import * as vscode from "vscode";
+import { Logger } from "../utils/Logger.js";
+import { AgentConfigManager } from "./AgentConfigManager.js";
+import { AgentConfig } from "../types/shared_T.js";
 
 /**
  * Agent 管理器
@@ -13,7 +12,7 @@ export class AgentManager {
   private agents: Map<string, AgentConfig> = new Map();
   private agentAccessTime: Map<string, number> = new Map();
   private readonly MAX_CACHED_AGENTS = 10; // 最多缓存 10 个 Agent
-  private currentAgentId: string = 'default';
+  private currentAgentId: string = "default";
   private agentConfigManager?: AgentConfigManager;
   private configChangeListener?: vscode.Disposable;
 
@@ -29,10 +28,10 @@ export class AgentManager {
   setAgentConfigManager(configManager: AgentConfigManager) {
     this.agentConfigManager = configManager;
     this.loadAgentsFromConfig();
-    
+
     // 监听配置变化事件，自动重新加载 Agent
     this.configChangeListener = configManager.onDidChangeConfig(() => {
-      Logger.info('检测到 Agent 配置变化，重新加载 Agent');
+      Logger.info("检测到 Agent 配置变化，重新加载 Agent");
       this.loadAgentsFromConfig();
     });
   }
@@ -50,23 +49,23 @@ export class AgentManager {
     try {
       const agents = this.agentConfigManager.getAgents();
       this.agents.clear();
-      
+
       // ✅ 只缓存前 N 个 Agent，避免内存浪费
       const limitedAgents = agents.slice(0, this.MAX_CACHED_AGENTS);
       for (const agent of limitedAgents) {
         this.agents.set(agent.id, agent);
       }
-      
+
       this.currentAgentId = this.agentConfigManager.getDefaultAgent();
-      
-      Logger.info('从配置文件加载 Agent', { 
+
+      Logger.info("从配置文件加载 Agent", {
         total: agents.length,
         cached: limitedAgents.length,
         limit: this.MAX_CACHED_AGENTS,
-        currentAgent: this.currentAgentId 
+        currentAgent: this.currentAgentId,
       });
     } catch (error) {
-      Logger.error('加载 Agent 配置失败，使用默认配置', error);
+      Logger.error("加载 Agent 配置失败，使用默认配置", error);
       this.registerDefaultAgents();
     }
   }
@@ -82,11 +81,11 @@ export class AgentManager {
 
     try {
       const agents: AgentConfig[] = [];
-      this.agents.forEach(agent => agents.push(agent));
+      this.agents.forEach((agent) => agents.push(agent));
       await this.agentConfigManager.updateAgents(agents);
-      Logger.debug('Agent 配置已保存');
+      Logger.debug("Agent 配置已保存");
     } catch (error) {
-      Logger.error('保存 Agent 配置失败', error);
+      Logger.error("保存 Agent 配置失败", error);
     }
   }
 
@@ -96,7 +95,7 @@ export class AgentManager {
   private registerDefaultAgents() {
     if (!this.agentConfigManager) {
       // AgentConfigManager 未初始化，抛出错误
-      Logger.errorAndThrow('AgentConfigManager 未初始化，无法加载默认 Agent');
+      Logger.errorAndThrow("AgentConfigManager 未初始化，无法加载默认 Agent");
       return;
     }
 
@@ -104,19 +103,19 @@ export class AgentManager {
       // 从配置文件加载 Agent，如果不存在则创建
       const agents = this.agentConfigManager.getAgents();
       this.agents.clear();
-      
+
       for (const agent of agents) {
         this.agents.set(agent.id, agent);
       }
-      
+
       this.currentAgentId = this.agentConfigManager.getDefaultAgent();
-      
-      Logger.info('从配置文件加载 Agent', { 
+
+      Logger.info("从配置文件加载 Agent", {
         agentCount: this.agents.size,
-        currentAgent: this.currentAgentId 
+        currentAgent: this.currentAgentId,
       });
     } catch (error) {
-      Logger.error('加载 Agent 配置失败', error);
+      Logger.error("加载 Agent 配置失败", error);
       throw error;
     }
   }
@@ -127,7 +126,7 @@ export class AgentManager {
   registerAgent(agent: AgentConfig) {
     this.agents.set(agent.id, agent);
     this.saveAgentsToConfig();
-    Logger.debug('Agent 已注册', { id: agent.id, name: agent.name });
+    Logger.debug("Agent 已注册", { id: agent.id, name: agent.name });
   }
 
   /**
@@ -137,10 +136,10 @@ export class AgentManager {
     if (this.agents.has(agent.id)) {
       Logger.errorAndThrow(`Agent ID "${agent.id}" 已存在`);
     }
-    
+
     this.agents.set(agent.id, agent);
     await this.saveAgentsToConfig();
-    Logger.info('新 Agent 已添加', { id: agent.id, name: agent.name });
+    Logger.info("新 Agent 已添加", { id: agent.id, name: agent.name });
   }
 
   /**
@@ -151,11 +150,11 @@ export class AgentManager {
     if (!agent) {
       Logger.errorAndThrow(`Agent ID "${agentId}" 不存在`);
     }
-    
+
     const updatedAgent = { ...agent, ...updates };
     this.agents.set(agentId, updatedAgent);
     await this.saveAgentsToConfig();
-    Logger.info('Agent 已更新', { id: agentId });
+    Logger.info("Agent 已更新", { id: agentId });
   }
 
   /**
@@ -165,10 +164,10 @@ export class AgentManager {
     if (!this.agents.has(agentId)) {
       Logger.errorAndThrow(`Agent ID "${agentId}" 不存在`);
     }
-    
+
     this.agents.delete(agentId);
     await this.saveAgentsToConfig();
-    Logger.info('Agent 已删除', { id: agentId });
+    Logger.info("Agent 已删除", { id: agentId });
   }
 
   /**
@@ -193,7 +192,7 @@ export class AgentManager {
     if (cached) {
       return cached;
     }
-    
+
     // 缓存未命中，按需从配置文件加载
     if (this.agentConfigManager) {
       const agent = this.agentConfigManager.getAgentById(agentId);
@@ -201,8 +200,9 @@ export class AgentManager {
         // 如果缓存已满，移除最旧的
         if (this.agents.size >= this.MAX_CACHED_AGENTS) {
           // 移除最久未访问的Agent
-          const oldestKey = Array.from(this.agentAccessTime.entries())
-            .sort(([,a], [,b]) => a - b)[0]?.[0];
+          const oldestKey = Array.from(this.agentAccessTime.entries()).sort(
+            ([, a], [, b]) => a - b
+          )[0]?.[0];
           if (oldestKey) {
             this.agents.delete(oldestKey);
             this.agentAccessTime.delete(oldestKey);
@@ -212,11 +212,11 @@ export class AgentManager {
         this.agents.set(agentId, agent);
         // 更新访问时间
         this.agentAccessTime.set(agentId, Date.now());
-        Logger.debug('按需加载 Agent', { id: agentId, name: agent.name });
+        Logger.debug("按需加载 Agent", { id: agentId, name: agent.name });
         return agent;
       }
     }
-    
+
     return undefined;
   }
 
@@ -236,20 +236,20 @@ export class AgentManager {
    */
   switchAgent(agentId: string): boolean {
     if (!this.agents.has(agentId)) {
-      Logger.error('切换 Agent 失败，Agent 不存在', { agentId });
+      Logger.error("切换 Agent 失败，Agent 不存在", { agentId });
       return false;
     }
 
     const oldAgentId = this.currentAgentId;
     this.currentAgentId = agentId;
-    
+
     const newAgent = this.agents.get(agentId)!;
-    Logger.info('Agent 已切换', { 
-      from: oldAgentId, 
+    Logger.info("Agent 已切换", {
+      from: oldAgentId,
       to: agentId,
-      name: newAgent.name 
+      name: newAgent.name,
     });
-    
+
     return true;
   }
 
@@ -273,12 +273,12 @@ export class AgentManager {
   updateAgentSystemPrompt(agentId: string, systemPrompt: string): boolean {
     const agent = this.agents.get(agentId);
     if (!agent) {
-      Logger.error('更新 Agent 失败，Agent 不存在', { agentId });
+      Logger.error("更新 Agent 失败，Agent 不存在", { agentId });
       return false;
     }
 
     agent.systemPrompt = systemPrompt;
-    Logger.info('Agent 系统提示词已更新', { agentId });
+    Logger.info("Agent 系统提示词已更新", { agentId });
     return true;
   }
 
@@ -286,18 +286,18 @@ export class AgentManager {
    * 删除 Agent
    */
   deleteAgent(agentId: string): boolean {
-    if (agentId === 'default') {
-      Logger.error('不能删除默认 Agent', { agentId });
+    if (agentId === "default") {
+      Logger.error("不能删除默认 Agent", { agentId });
       return false;
     }
 
     const success = this.agents.delete(agentId);
     if (success) {
-      Logger.info('Agent 已删除', { agentId });
-      
+      Logger.info("Agent 已删除", { agentId });
+
       // 如果删除的是当前 Agent，切换回默认
       if (this.currentAgentId === agentId) {
-        this.currentAgentId = 'default';
+        this.currentAgentId = "default";
       }
     }
     return success;
