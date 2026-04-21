@@ -94,16 +94,31 @@ export class OpenAIAdapter implements ModelAdapter {
           requestBodySize: JSON.stringify(requestBody).length,
         });
 
-        // 打印完整的请求体 JSON（用于调试 400 错误）
-        Logger.debug("=== 完整的请求体 JSON ===\n" + JSON.stringify(requestBody, null, 2));
+        // 打印脱敏后的请求体（过滤敏感信息）
+        if (Logger.isDebug()) {
+          const sanitizedRequestBody = JSON.parse(JSON.stringify(requestBody, (key, value) => {
+            // 过滤敏感字段
+            if (key.toLowerCase().includes('key') || key.toLowerCase().includes('token') || key.toLowerCase().includes('secret')) {
+              return '***REDACTED***';
+            }
+            return value;
+          }));
+          Logger.debug("=== 请求体（已脱敏）===\n" + JSON.stringify(sanitizedRequestBody, null, 2));
+        }
 
         const response = await this.client.chat.completions.create(requestBody);
 
-        Logger.debug("API 响应", {
-          hasToolCalls: !!response.choices[0]?.message?.tool_calls,
-          toolCallsCount: response.choices[0]?.message?.tool_calls?.length || 0,
-          content: response.choices[0]?.message?.content?.substring(0, 100) + "...",
-        });
+        // 打印脱敏后的响应（过滤敏感信息）
+        if (Logger.isDebug()) {
+          const sanitizedResponse = JSON.parse(JSON.stringify(response, (key, value) => {
+            // 过滤敏感字段
+            if (key.toLowerCase().includes('key') || key.toLowerCase().includes('token') || key.toLowerCase().includes('secret')) {
+              return '***REDACTED***';
+            }
+            return value;
+          }));
+          Logger.debug("\n=== 响应（已脱敏）===\n" + JSON.stringify(sanitizedResponse, null, 2));
+        }
 
         const choice = response.choices[0];
 
@@ -192,15 +207,14 @@ export class OpenAIAdapter implements ModelAdapter {
         }
 
         // 将工具结果添加到消息历史中
-        if (choice.message.content) {
-          formattedMessages.push({
-            role: choice.message.role,
-            content: choice.message.content,
-          });
-        }
+        // 注意：不添加 choice.message.content，因为工具调用时 content 包含的是冗余的 XML 文本
+        // 只添加工具执行结果，避免 XML 文本污染聊天记录
         formattedMessages.push(...toolResults);
 
-        Logger.debug("工具执行完成，准备进行下一次迭代");
+        Logger.debug("工具执行完成，准备进行下一次迭代", {
+          toolResultsCount: toolResults.length,
+          skippedContent: !!choice.message.content,
+        });
       }
 
       Logger.warn("达到最大迭代次数，返回当前结果");

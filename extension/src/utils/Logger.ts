@@ -129,4 +129,12 @@ export class Logger {
       this.outputChannel?.info(`${this.prefix} [CHAT] ${action}`);
     }
   }
+
+  /**
+   * 检查是否启用了调试日志
+   */
+  static isDebug(): boolean {
+    // 检查 VSCode 的日志级别是否包含 debug
+    return this.outputChannel?.logLevel === vscode.LogLevel.Debug;
+  }
 }

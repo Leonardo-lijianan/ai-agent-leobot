@@ -481,7 +481,8 @@ export class ChatViewProvider implements vscode.WebviewViewProvider {
 
     // 只在 Agent 模式下启用工具
     const enableTools = this._agentModeEnabled;
-    const response = await this._modelAdapter.chat(messagesToSend, this._currentModel, enableTools);
+    // 不传入 model 参数，让适配器使用 config.modelId（真实的模型名称）
+    const response = await this._modelAdapter.chat(messagesToSend, undefined, enableTools);
 
     const assistantMessage: Message = {
       role: "assistant",

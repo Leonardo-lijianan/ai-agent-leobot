@@ -165,7 +165,10 @@ export class ConfigPanel {
         // 获取模型配置
         const config: ModelConfig = this.modelConfigManager.getModelById(id);
         Logger.config(`当前模型配置：${JSON.stringify(config)}`);
-        return { success: true, data: { config } };
+        // 不返回 API Key（前端不需要知道，也不显示）
+        const configWithoutApiKey = { ...config };
+        delete configWithoutApiKey.apiKey;
+        return { success: true, data: { config: configWithoutApiKey } };
       } else if (configType === "agent") {
         // 获取 Agent 配置
         const config: AgentConfig = this.agentConfigManager.getAgentById(id);
@@ -253,13 +256,37 @@ export class ConfigPanel {
       const chatViewProvider = getChatViewProvider();
 
       if (configType === "model") {
-        // 修改模型配置
+        // 修改模型配置 - 一次性获取并更新所有字段，避免竞态条件
         const models = this.modelConfigManager.getModels();
         const index = models.findIndex((m) => m.id === config.id);
         if (index !== -1) {
-          models[index] = config;
+          // 更新非敏感字段
+          models[index].protocolType = config.protocolType;
+          models[index].endpoint = config.endpoint;
+          models[index].modelId = config.modelId;
+
+          // 如果有新 API 密钥，更新它（加密）
+          if (config.apiKey && config.apiKey.trim() !== "") {
+            if (!this.context) {
+              Logger.error("Context 未初始化，无法加密 API Key");
+              models[index].apiKey = config.apiKey; // 直接保存明文（兼容模式）
+            } else {
+              const { encrypt } = await import("../utils/crypto.js");
+              Logger.config("加密 API Key", { modelId: config.id });
+              const encryptedKey = await encrypt(config.apiKey, this.context);
+              Logger.config("API Key 已加密", {
+                modelId: config.id,
+                encryptedLength: encryptedKey.length,
+              });
+              models[index].apiKey = encryptedKey;
+            }
+          }
+          // 否则保持原有 API Key 不变（已加密）
+
+          // 一次性保存所有更改
           await this.modelConfigManager.updateModels(models);
           Logger.config(`模型配置已更新：${config.id}`);
+
           if (chatViewProvider?.view) {
             messageHub.sendToWebview(chatViewProvider.view.webview, "config>updateList>chat", {
               listType: "model",

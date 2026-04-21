@@ -177,7 +177,7 @@ import { messageHub } from "./utils/messageHub.js";
         configName.value = modelConfig.id;
         configProvider.value = modelConfig.protocolType;
         configEndpoint.value = modelConfig.endpoint;
-        configApiKey.value = modelConfig.apiKey;
+        configApiKey.value = ""; // 不回填 API Key（后端已过滤）
         configModelId.value = modelConfig.modelId;
         modelModalTitle.textContent = "✏️ 编辑模型配置";
         configModelModal.style.display = "block";
